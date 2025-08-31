@@ -1,4 +1,5 @@
-// PASTE THIS ENTIRE BLOCK INTO MainActivity.java
+// app/src/main/java/com/example/paymenttracker/MainActivity.java
+
 package com.example.paymenttracker;
 
 import android.Manifest;

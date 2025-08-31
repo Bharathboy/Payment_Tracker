@@ -13,6 +13,8 @@ android {
         versionCode 1
         versionName "1.0"
 
+        renderscriptTargetApi 18
+        renderscriptSupportModeEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -34,6 +36,7 @@ dependencies {
     implementation libs.material
     implementation libs.activity
     implementation libs.okhttp
+    implementation libs.realtimeblurview
     implementation libs.androidx.cardview
     implementation libs.constraintlayout
     testImplementation libs.junit

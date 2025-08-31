@@ -1,38 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp"
+    android:background="@drawable/main_background_gradient"
     tools:context=".MainActivity">
 
     <TextView
+        android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:text="Webhook Settings"
         android:textColor="@color/white"
         android:textSize="28sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/subtitleTextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
+        android:id="@+id/subtitleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginBottom="32dp"
         android:text="Connect to your Telegram Bot"
         android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/glass_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
+
+    <FrameLayout
+        android:id="@+id/glass_panel"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        app:cardBackgroundColor="@color/card_background"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="8dp">
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/glass_panel_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.github.mmin18.widget.RealtimeBlurView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:realtimeBlurRadius="20dp"
+            app:realtimeOverlayColor="#33FFFFFF" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -45,6 +63,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColorHint="@color/text_secondary"
+                app:boxBackgroundColor="#20FFFFFF"
                 app:boxStrokeColor="@color/accent_color">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -62,6 +81,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:textColorHint="@color/text_secondary"
+                app:boxBackgroundColor="#20FFFFFF"
                 app:boxStrokeColor="@color/accent_color"
                 app:passwordToggleEnabled="true"
                 app:passwordToggleTint="@color/text_secondary">
@@ -74,24 +94,26 @@
                     android:inputType="textPassword"
                     android:textColor="@color/text_primary" />
             </com.google.android.material.textfield.TextInputLayout>
-
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
+    </FrameLayout>
 
-    <!-- Container for the two buttons -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/buttons_layout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/glass_panel"
+        app:layout_constraintStart_toStartOf="@id/glass_panel"
+        app:layout_constraintEnd_toEndOf="@id/glass_panel">
 
         <Button
             android:id="@+id/testButton"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
             android:layout_height="60dp"
-            android:layout_weight="1"
             android:layout_marginEnd="8dp"
+            android:layout_weight="1"
             android:text="Test"
             android:textColor="@color/accent_color"
             android:textAllCaps="false"
@@ -101,8 +123,8 @@
             android:id="@+id/saveButton"
             android:layout_width="0dp"
             android:layout_height="60dp"
-            android:layout_weight="2"
             android:layout_marginStart="8dp"
+            android:layout_weight="2"
             android:background="@drawable/gradient_button"
             android:text="Save &amp; Start Service"
             android:textAllCaps="false"
@@ -111,15 +133,17 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-
     <TextView
         android:id="@+id/statusTextView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:gravity="center"
         android:text="Status: Ready"
         android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/buttons_layout"
+        app:layout_constraintStart_toStartOf="@id/buttons_layout"
+        app:layout_constraintEnd_toEndOf="@id/buttons_layout"/>
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
