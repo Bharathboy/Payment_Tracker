@@ -36,7 +36,7 @@ dependencies {
     implementation libs.material
     implementation libs.activity
     implementation libs.okhttp
-    implementation libs.realtimeblurview
+    implementation libs.blurry
     implementation libs.androidx.cardview
     implementation libs.constraintlayout
     testImplementation libs.junit

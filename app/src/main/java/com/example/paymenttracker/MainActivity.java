@@ -1,5 +1,3 @@
-// app/src/main/java/com/example/paymenttracker/MainActivity.java
-
 package com.example.paymenttracker;
 
 import android.Manifest;
@@ -9,8 +7,11 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,6 +25,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 
+import jp.wasabeef.blurry.Blurry;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -38,8 +40,11 @@ public class MainActivity extends AppCompatActivity {
     private EditText webhookUrlEditText;
     private EditText secretKeyEditText;
     private Button saveButton;
-    private Button testButton; // New test button
+    private Button testButton;
     private TextView statusTextView;
+    private ImageView blurBackground;
+    private View rootLayout;
+
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -66,8 +71,28 @@ public class MainActivity extends AppCompatActivity {
         webhookUrlEditText = findViewById(R.id.webhookUrlEditText);
         secretKeyEditText = findViewById(R.id.secretKeyEditText);
         saveButton = findViewById(R.id.saveButton);
-        testButton = findViewById(R.id.testButton); // Link to the new test button
+        testButton = findViewById(R.id.testButton);
         statusTextView = findViewById(R.id.statusTextView);
+        blurBackground = findViewById(R.id.blur_background);
+        rootLayout = findViewById(R.id.root_layout);
+
+        // This is the key part: we wait for the layout to be drawn,
+        // then we capture it, blur it, and set it as the background.
+        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                // Remove the listener to prevent it from running multiple times
+                rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+
+                // Use the Blurry library to create the effect
+                Blurry.with(MainActivity.this)
+                        .radius(25) // Blur radius
+                        .sampling(2) // Downscale factor for performance
+                        .capture(rootLayout) // Capture the entire root layout
+                        .into(blurBackground); // Apply the blurred image to our ImageView
+            }
+        });
+
 
         loadSettings();
 
@@ -156,6 +181,7 @@ public class MainActivity extends AppCompatActivity {
                 // We must use runOnUiThread to show a Toast from a background thread
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Test Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
+
             @Override
             public void onResponse(Call call, Response response) {
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Test Response Code: " + response.code(), Toast.LENGTH_LONG).show());
