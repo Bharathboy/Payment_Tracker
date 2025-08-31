@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Your new dark theme color palette -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="app_background">#121212</color> <!-- Dark background -->
+    <color name="card_background">#1E1E1E</color> <!-- Slightly lighter card background -->
+    <color name="text_primary">#E0E0E0</color> <!-- Light grey for primary text -->
+    <color name="text_secondary">#A0A0A0</color> <!-- Dimmer grey for hints -->
+    <color name="accent_color">#BB86FC</color> <!-- A nice purple for accents -->
+    <color name="gradient_start">#6200EE</color> <!-- Gradient start color for the button -->
+    <color name="gradient_end">#3700B3</color> <!-- Gradient end color for the button -->
+</resources>

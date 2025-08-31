@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Base application theme. This applies the new dark colors
+        and removes the default top action bar for a cleaner look.
+    -->
+    <style name="Theme.PaymentTracker" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/accent_color</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/app_background</item>
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
+</resources>
