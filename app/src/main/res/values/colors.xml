@@ -3,6 +3,7 @@
     <!-- Modern Messaging App Color Palette -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
+    <color name="accent_color">#0088CC</color>
     <!-- Background Colors -->
     <color name="bg_primary">#1E1E2DCC</color> <!-- rgba(30,30,45,0.8) -->
     <color name="bg_accent_translucent">#A445B22A</color> <!-- rgba(164,69,178,0.15) -->
