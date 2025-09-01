@@ -41,6 +41,9 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
             case "IGNORED":
                 colorRes = R.color.text_pink;
                 break;
+            case "WEBHOOK NOT SET": // NEW CASE
+                colorRes = R.color.text_secondary;
+                break;
             default:
                 colorRes = R.color.text_secondary;
         }

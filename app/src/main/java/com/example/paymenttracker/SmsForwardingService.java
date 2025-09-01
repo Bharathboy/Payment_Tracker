@@ -38,7 +38,7 @@ import okhttp3.Response;
 public class SmsForwardingService extends Service {
     private static final String TAG = "SmsForwardingService";
     public static final String CHANNEL_ID = "SmsForwarderChannel";
-    private Handler mainHandler = new Handler(Looper.getMainLooper()); // CORRECTED LINE
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -67,9 +67,16 @@ public class SmsForwardingService extends Service {
 
                 Message newMessage;
                 if (details != null) {
-                    Log.d(TAG, "Successfully parsed payment SMS in service.");
-                    sendWebhook(this, details, messageBody);
-                    newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
+                    SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
+                    String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
+                    if (webhookUrl.isEmpty()) {
+                        Log.d(TAG, "Parsed payment SMS but no webhook URL is set.");
+                        newMessage = new Message(originatingAddress, messageBody, "WEBHOOK NOT SET", dateString);
+                    } else {
+                        Log.d(TAG, "Successfully parsed payment SMS in service.");
+                        sendWebhook(this, details, messageBody, webhookUrl, sharedPreferences.getString(MainActivity.SECRET_KEY, ""));
+                        newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
+                    }
                 } else {
                     Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
                     newMessage = new Message(originatingAddress, messageBody, "IGNORED", dateString);
@@ -95,16 +102,7 @@ public class SmsForwardingService extends Service {
         editor.apply();
     }
 
-    private void sendWebhook(Context context, PaymentDetails details, String fullSms) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
-        String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
-        String secretKey = sharedPreferences.getString(MainActivity.SECRET_KEY, "");
-
-        if (webhookUrl.isEmpty()) {
-            Log.e(TAG, "Webhook URL is not set. Cannot send webhook.");
-            return;
-        }
-
+    private void sendWebhook(Context context, PaymentDetails details, String fullSms, String webhookUrl, String secretKey) {
         JSONObject jsonPayload = new JSONObject();
         try {
             jsonPayload.put("amount_received", details.amount);
@@ -113,6 +111,7 @@ public class SmsForwardingService extends Service {
             jsonPayload.put("sender_vpa", details.senderVpa);
             jsonPayload.put("full_sms_body", fullSms);
         } catch (JSONException e) {
+            mainHandler.post(() -> Toast.makeText(context, "Error creating JSON payload", Toast.LENGTH_SHORT).show());
             Log.e(TAG, "Error creating JSON payload", e);
             return;
         }
