@@ -14,7 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.PowerManager; // Added this import
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -33,6 +33,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.annotation.NonNull;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,6 +45,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 public class MainActivity extends AppCompatActivity {
     private Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -57,6 +62,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
     public static final String SECRET_KEY = "secretKey";
+    public static final String TELEGRAM_BOT_TOKEN = "telegramBotToken";
+    public static final String TELEGRAM_CHAT_ID = "telegramChatId";
     public static final String MESSAGES = "messages";
 
     private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
@@ -93,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         settingsButton = findViewById(R.id.settingsButton);
+        ImageButton telegramSettingsButton = findViewById(R.id.telegramSettingsButton);
         statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
@@ -115,7 +123,8 @@ public class MainActivity extends AppCompatActivity {
             Button dialogTestButton = dialogView.findViewById(R.id.dialogTestButton);
             Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
 
-            loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
+            loadSettingsForDialog(dialogWebhookUrlEditText, WEBHOOK_URL);
+            loadSettingsForDialog(dialogSecretKeyEditText, SECRET_KEY);
 
             final AlertDialog dialog = builder.create();
             Window window = dialog.getWindow();
@@ -129,7 +138,8 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Webhook URL and Secret Key cannot be empty", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                saveSettingsFromDialog(webhookUrl, secretKey);
+                saveSettingsFromDialog(WEBHOOK_URL, webhookUrl);
+                saveSettingsFromDialog(SECRET_KEY, secretKey);
                 statusTextView.setText("Settings saved");
                 checkAndRequestPermissions();
                 dialog.dismiss();
@@ -145,23 +155,68 @@ public class MainActivity extends AppCompatActivity {
             });
             dialog.show();
         });
+
+        telegramSettingsButton.setOnClickListener(v -> showTelegramSettingsDialog());
     }
 
-    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
+    private void showTelegramSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_telegram_settings, null);
+        builder.setView(dialogView);
+
+        final EditText botTokenEditText = dialogView.findViewById(R.id.dialogTelegramBotTokenEditText);
+        final EditText chatIdEditText = dialogView.findViewById(R.id.dialogTelegramChatIdEditText);
+        Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
+        Button dialogTestButton = dialogView.findViewById(R.id.dialogTestTelegramButton);
+        Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+
+        loadSettingsForDialog(botTokenEditText, TELEGRAM_BOT_TOKEN);
+        loadSettingsForDialog(chatIdEditText, TELEGRAM_CHAT_ID);
+
+        final AlertDialog dialog = builder.create();
+        Window window = dialog.getWindow();
+        if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
+        dialogSaveButton.setOnClickListener(dv_save -> {
+            String botToken = botTokenEditText.getText().toString().trim();
+            String chatId = chatIdEditText.getText().toString().trim();
+            if (botToken.isEmpty() || chatId.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Bot token and Chat ID cannot be empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            saveSettingsFromDialog(TELEGRAM_BOT_TOKEN, botToken);
+            saveSettingsFromDialog(TELEGRAM_CHAT_ID, chatId);
+            statusTextView.setText("Telegram settings saved");
+            checkAndRequestPermissions();
+            dialog.dismiss();
+        });
+        dialogTestButton.setOnClickListener(dv_test -> {
+            String botToken = botTokenEditText.getText().toString().trim();
+            String chatId = chatIdEditText.getText().toString().trim();
+            if (botToken.isEmpty() || chatId.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Bot token and Chat ID cannot be empty for testing", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            testTelegram(botToken, chatId);
+        });
+
+        dialog.show();
+    }
+
+    private void saveSettingsFromDialog(String key, String value) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(WEBHOOK_URL, webhookUrl);
-        editor.putString(SECRET_KEY, secretKey);
+        editor.putString(key, value);
         editor.apply();
         Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
     }
 
-    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
+    private void loadSettingsForDialog(EditText editText, String key) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
-        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
-        urlEditText.setText(webhookUrl);
-        keyEditText.setText(secretKey);
+        String value = sharedPreferences.getString(key, "");
+        editText.setText(value);
     }
 
     @Override
@@ -237,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadMessagesFromPrefs() {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String messagesString = sharedPreferences.getString(MESSAGES, "");
+        String messagesString = sharedPreferences.getString(MESSAGES, "[]");
         List<Message> loadedMessages = new ArrayList<>();
 
         if (messagesString != null && !messagesString.isEmpty()) {
@@ -412,4 +467,56 @@ public class MainActivity extends AppCompatActivity {
         });
         t.start();
     }
+
+    private void testTelegram(String botToken, String chatId) {
+        if (botToken == null || botToken.trim().isEmpty() || chatId == null || chatId.trim().isEmpty()) {
+            Toast.makeText(this, "Bot token or Chat ID is empty!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        executor.execute(() -> {
+            try {
+                TelegramSender telegramSender = new TelegramSender();
+
+                // Build JSON using JSONObject for pretty print
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("amount", "1.00");
+                jsonObject.put("upiRefId", "TEST1234567890");
+                jsonObject.put("senderName", "Test User");
+                jsonObject.put("senderVpa", "test@upi");
+                jsonObject.put("fullSmsBody", "This is a test message from your app.");
+                jsonObject.put("bank", "Test Bank");
+                jsonObject.put("dateTime", "2023-10-27 10:30:00");
+                jsonObject.put("notes", "Testing");
+
+                // Pretty print with 4 spaces indentation
+                String jsonPayload = jsonObject.toString(4);
+
+                // Send JSON as text message
+                telegramSender.sendPaymentDetails(botToken, chatId, jsonPayload);
+
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this,
+                                "Test Telegram message sent. Check the channel.",
+                                Toast.LENGTH_LONG).show()
+                );
+
+            } catch (Exception e) {
+                Log.e("TelegramTest", "Error sending Telegram test message", e);
+
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this,
+                                "Test Telegram error: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show()
+                );
+            } finally {
+                executor.shutdown();
+            }
+        });
+    }
+
+
+
 }

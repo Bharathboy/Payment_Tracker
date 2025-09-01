@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -37,25 +38,19 @@ import okhttp3.Response;
 public class SmsForwardingService extends Service {
     private static final String TAG = "SmsForwardingService";
     public static final String CHANNEL_ID = "SmsForwarderChannel";
-    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Handler mainHandler;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mainHandler = new Handler(Looper.getMainLooper());
+        createNotificationChannel();
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand called.");
-        createNotificationChannel();
-
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent,
-                PendingIntent.FLAG_IMMUTABLE);
-
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("SMS Forwarding Active")
-                .setContentText("Listening for incoming payment SMS...")
-                .setSmallIcon(R.drawable.ic_notification) // replace with your drawable
-                .setContentIntent(pendingIntent)
-                .build();
-
-        startForeground(1, notification);
+        showForegroundNotification();
 
         if (intent != null && intent.getExtras() != null) {
             Log.d(TAG, "Intent received. Processing SMS messages.");
@@ -65,61 +60,69 @@ public class SmsForwardingService extends Service {
                 long timestampMillis = smsMessage.getTimestampMillis();
                 String dateString = String.valueOf(timestampMillis);
 
-                // Try parse
-                PaymentDetails details = SmsParser.parse(messageBody);
+                if (messageBody == null || originatingAddress == null) {
+                    Log.w(TAG, "Received SMS with null body or sender. Skipping...");
+                    continue;
+                }
 
+                PaymentDetails details = SmsParser.parse(messageBody);
                 Message newMessage;
+
+                SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
+                String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
+                String telegramBotToken = sharedPreferences.getString(MainActivity.TELEGRAM_BOT_TOKEN, "");
+                String telegramChatId = sharedPreferences.getString(MainActivity.TELEGRAM_CHAT_ID, "");
+                String secretKey = sharedPreferences.getString(MainActivity.SECRET_KEY, "");
+
                 if (details != null) {
-                    SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
-                    String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
-                    if (webhookUrl == null || webhookUrl.isEmpty()) {
-                        Log.d(TAG, "Parsed payment SMS but no webhook URL is set.");
-                        newMessage = new Message(originatingAddress, messageBody, "WEBHOOK_NOT_SET", dateString);
+                    if ((webhookUrl == null || webhookUrl.isEmpty()) &&
+                            (telegramBotToken == null || telegramBotToken.isEmpty() || telegramChatId == null || telegramChatId.isEmpty())) {
+                        Log.d(TAG, "Parsed payment SMS but no forwarding options set.");
+                        newMessage = new Message(originatingAddress, messageBody, "NO_FORWARDER_SET", dateString);
                     } else {
-                        Log.d(TAG, "Successfully parsed payment SMS in service.");
-                        sendWebhook(this, details, messageBody, webhookUrl, sharedPreferences.getString(MainActivity.SECRET_KEY, ""));
+                        Log.d(TAG, "Successfully parsed payment SMS.");
+
+                        if (webhookUrl != null && !webhookUrl.isEmpty()) {
+                            sendWebhook(details, messageBody, webhookUrl, secretKey);
+                        }
+
+                        if (telegramBotToken != null && !telegramBotToken.isEmpty() && telegramChatId != null && !telegramChatId.isEmpty()) {
+                            sendTelegramMessage(details, messageBody, telegramBotToken, telegramChatId);
+                        }
+
                         newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
                     }
                 } else {
-                    // <-- CHANGE: use IGNORED for non-matching messages
-                    Log.d(TAG, "SMS did not parse into PaymentDetails. Tagging as IGNORED. SMS body: " + messageBody);
+                    Log.d(TAG, "SMS ignored (not a payment message): " + messageBody);
                     newMessage = new Message(originatingAddress, messageBody, "IGNORED", dateString);
                 }
 
                 saveMessageToPrefs(newMessage);
-
-                // Broadcast both the Parcelable and fallback fields
-                Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
-                try {
-                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
-                } catch (Exception e) {
-                    Log.w(TAG, "Could not put Parcelable Message into intent.", e);
-                }
-
-                // fallback fields always present
-                broadcastIntent.putExtra("sender", originatingAddress != null ? originatingAddress : "UNKNOWN");
-                broadcastIntent.putExtra("body", messageBody != null ? messageBody : "");
-                broadcastIntent.putExtra("status", newMessage != null ? newMessage.status : "UNKNOWN");
-                broadcastIntent.putExtra("timestamp", dateString);
-
-                sendBroadcast(broadcastIntent);
-                Log.d(TAG, "New message globally broadcasted to MainActivity from sender: " + originatingAddress);
+                broadcastNewMessage(newMessage);
             }
         }
 
         return START_STICKY;
     }
 
-    /**
-     * Save messages as a JSON array (newest first).
-     */
+    private void broadcastNewMessage(Message message) {
+        Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
+        broadcastIntent.putExtra("sender", message.sender != null ? message.sender : "UNKNOWN");
+        broadcastIntent.putExtra("body", message.content != null ? message.content : "");
+        broadcastIntent.putExtra("status", message.status != null ? message.status : "UNKNOWN");
+        broadcastIntent.putExtra("timestamp", message.timestamp != null ? message.timestamp : String.valueOf(System.currentTimeMillis()));
+        sendBroadcast(broadcastIntent);
+        Log.d(TAG, "New message broadcasted: " + message.sender);
+    }
+
     private void saveMessageToPrefs(Message message) {
         SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
         String messagesJson = sharedPreferences.getString(MainActivity.MESSAGES, "[]");
+
         JSONArray existingArray;
         try {
             existingArray = new JSONArray(messagesJson);
-        } catch (Exception e) {
+        } catch (JSONException e) {
             existingArray = new JSONArray();
         }
 
@@ -134,18 +137,19 @@ public class SmsForwardingService extends Service {
         }
 
         JSONArray newArray = new JSONArray();
-        newArray.put(obj); // prepend newest
+        newArray.put(obj);
         for (int i = 0; i < existingArray.length(); i++) {
             try {
                 newArray.put(existingArray.get(i));
-            } catch (JSONException ignore) { /* skip malformed */ }
+            } catch (JSONException ignore) {
+            }
         }
 
         sharedPreferences.edit().putString(MainActivity.MESSAGES, newArray.toString()).apply();
         Log.d(TAG, "Message saved to SharedPreferences successfully.");
     }
 
-    private void sendWebhook(Context context, PaymentDetails details, String fullSms, String webhookUrl, String secretKey) {
+    private void sendWebhook(PaymentDetails details, String fullSms, String webhookUrl, String secretKey) {
         JSONObject jsonPayload = new JSONObject();
         try {
             jsonPayload.put("amount_received", details.amount);
@@ -154,7 +158,7 @@ public class SmsForwardingService extends Service {
             jsonPayload.put("sender_vpa", details.senderVpa);
             jsonPayload.put("full_sms_body", fullSms);
         } catch (JSONException e) {
-            mainHandler.post(() -> Toast.makeText(context, "Error creating JSON payload", Toast.LENGTH_SHORT).show());
+            showToast("Error creating JSON payload");
             Log.e(TAG, "Error creating JSON payload", e);
             return;
         }
@@ -166,35 +170,112 @@ public class SmsForwardingService extends Service {
         Request request = new Request.Builder()
                 .url(webhookUrl)
                 .post(body)
-                .addHeader("X-My-App-Signature", secretKey == null ? "" : secretKey)
+                .addHeader("X-My-App-Signature", secretKey != null ? secretKey : "")
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
+                showToast("Webhook failed to send");
                 Log.e(TAG, "Webhook failed to send", e);
             }
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    mainHandler.post(() -> Toast.makeText(context, "Webhook sent successfully", Toast.LENGTH_SHORT).show());
-                } else {
-                    mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
-                }
+                showToast(response.isSuccessful() ? "Webhook sent successfully" : "Webhook failed");
                 Log.d(TAG, "Webhook response code: " + response.code());
                 response.close();
             }
         });
     }
 
+    private void sendTelegramMessage(PaymentDetails details, String fullSms, String botToken, String chatId) {
+        String telegramUrl = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+        OkHttpClient client = new OkHttpClient();
+
+        String jsonString;
+        try {
+            JSONObject json = new JSONObject();
+            json.put("amount", details.amount != null ? details.amount : "");
+            json.put("upiRefId", details.upiRefId != null ? details.upiRefId : "");
+            json.put("senderName", details.senderName != null ? details.senderName : "");
+            json.put("senderVpa", details.senderVpa != null ? details.senderVpa : "");
+            json.put("fullSmsBody", fullSms != null ? fullSms : "");
+            json.put("bank", details.bank != null ? details.bank : "");
+            json.put("dateTime", details.dateTime != null ? details.dateTime : "");
+            json.put("notes", details.notes != null ? details.notes : "");
+            jsonString = "<pre>" + json.toString(4) + "</pre>"; // Pretty print with HTML parse mode
+        } catch (JSONException e) {
+            showToast("Error creating Telegram payload");
+            Log.e(TAG, "Error creating JSON payload", e);
+            return;
+        }
+
+        JSONObject requestJson = new JSONObject();
+        try {
+            requestJson.put("chat_id", chatId);
+            requestJson.put("text", jsonString);
+            requestJson.put("parse_mode", "HTML");
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating request JSON", e);
+            return;
+        }
+
+        MediaType JSON_MEDIA = MediaType.get("application/json; charset=utf-8");
+        RequestBody requestBody = RequestBody.create(requestJson.toString(), JSON_MEDIA);
+
+        Request request = new Request.Builder()
+                .url(telegramUrl)
+                .post(requestBody)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                showToast("Failed to send message to Telegram");
+                Log.e(TAG, "Failed to send message to Telegram", e);
+            }
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    showToast("Message sent to Telegram");
+                    Log.d(TAG, "Telegram response code: " + response.code());
+                } else {
+                    String errorBody = response.body() != null ? response.body().string() : "empty";
+                    showToast("Telegram send failed");
+                    Log.e(TAG, "Error: " + response.code() + ", Body: " + errorBody);
+                }
+                response.close();
+            }
+        });
+    }
+
+    private void showForegroundNotification() {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("SMS Forwarding Active")
+                .setContentText("Listening for payment SMS...")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build();
+
+        startForeground(1, notification);
+    }
+
     private void createNotificationChannel() {
-        NotificationChannel serviceChannel = new NotificationChannel(
-                CHANNEL_ID,
-                "SMS Forwarder Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-        );
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager != null) manager.createNotificationChannel(serviceChannel);
-        Log.d(TAG, "Notification channel created.");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "SMS Forwarder Service",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) manager.createNotificationChannel(serviceChannel);
+            Log.d(TAG, "Notification channel created.");
+        }
+    }
+
+    private void showToast(String message) {
+        mainHandler.post(() -> Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show());
     }
 
     @Nullable
@@ -203,4 +284,3 @@ public class SmsForwardingService extends Service {
         return null;
     }
 }
-
