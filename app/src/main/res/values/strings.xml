@@ -6,7 +6,8 @@
     <string name="notification_channel_name">SMS Forwarder Channel</string>
     <string name="notification_channel_description">Notifies the user that the service is running in the background.</string>
 
-    <!-- Webhook settings dialog strings -->
+    <string name="dialog_unified_settings_title">Forwarding Settings</string>
+
     <string name="dialog_webhook_title">Webhook Settings</string>
     <string name="dialog_webhook_url_hint">Enter Webhook URL</string>
     <string name="dialog_secret_key_hint">Enter Secret Key (Optional)</string>
@@ -19,13 +20,11 @@
     <string name="test_webhook_button">Test Webhook</string>
     <string name="cancel_button_text">Cancel</string>
 
-    <!-- Battery optimization dialog strings -->
     <string name="dialog_battery_optimization_title">Disable Battery Optimization</string>
     <string name="dialog_battery_optimization_message">The app needs to run in the background to forward messages. Please disable battery optimization for this app to prevent the system from killing the service.</string>
     <string name="dialog_battery_optimization_settings_button">Go to Settings</string>
     <string name="dialog_battery_optimization_cancel_button">Cancel</string>
 
-    <!-- Telegram settings dialog strings -->
     <string name="telegram_settings_title">Telegram Settings</string>
     <string name="telegram_bot_token_hint">Enter Telegram Bot Token</string>
     <string name="telegram_chat_id_hint">Enter Chat ID (or User ID)</string>

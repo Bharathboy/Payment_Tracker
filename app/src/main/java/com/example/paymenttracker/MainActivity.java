@@ -35,7 +35,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.annotation.NonNull;
 
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
     private MessageAdapter messageAdapter;
     private RecyclerView recyclerViewMessages;
     private TextView statusTextView;
-    private ImageButton settingsButton;
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -99,8 +97,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d("MainActivity", "Detected old data format and cleared messages from SharedPreferences.");
         }
 
-        settingsButton = findViewById(R.id.settingsButton);
-        ImageButton telegramSettingsButton = findViewById(R.id.telegramSettingsButton);
+        ImageButton settingsButton = findViewById(R.id.settingsButton);
         statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
@@ -111,90 +108,67 @@ public class MainActivity extends AppCompatActivity {
 
         checkAndRequestPermissions();
 
-        settingsButton.setOnClickListener(v -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            LayoutInflater inflater = getLayoutInflater();
-            View dialogView = inflater.inflate(R.layout.dialog_webhook_settings, null);
-            builder.setView(dialogView);
+        settingsButton.setOnClickListener(v -> showSettingsDialog());
 
-            final EditText dialogWebhookUrlEditText = dialogView.findViewById(R.id.dialogWebhookUrlEditText);
-            final EditText dialogSecretKeyEditText = dialogView.findViewById(R.id.dialogSecretKeyEditText);
-            Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
-            Button dialogTestButton = dialogView.findViewById(R.id.dialogTestButton);
-            Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
-
-            loadSettingsForDialog(dialogWebhookUrlEditText, WEBHOOK_URL);
-            loadSettingsForDialog(dialogSecretKeyEditText, SECRET_KEY);
-
-            final AlertDialog dialog = builder.create();
-            Window window = dialog.getWindow();
-            if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-            dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
-            dialogSaveButton.setOnClickListener(dv_save -> {
-                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
-                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
-                if (webhookUrl.isEmpty() || secretKey.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Webhook URL and Secret Key cannot be empty", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                saveSettingsFromDialog(WEBHOOK_URL, webhookUrl);
-                saveSettingsFromDialog(SECRET_KEY, secretKey);
-                statusTextView.setText("Settings saved");
-                checkAndRequestPermissions();
-                dialog.dismiss();
-            });
-            dialogTestButton.setOnClickListener(dv_test -> {
-                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
-                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
-                if (webhookUrl.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                testWebhook(webhookUrl, secretKey);
-            });
-            dialog.show();
-        });
-
-        telegramSettingsButton.setOnClickListener(v -> showTelegramSettingsDialog());
+        // The telegramSettingsButton is no longer in the layout, so we don't need to find it here.
     }
 
-    private void showTelegramSettingsDialog() {
+    private void showSettingsDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         LayoutInflater inflater = getLayoutInflater();
-        View dialogView = inflater.inflate(R.layout.dialog_telegram_settings, null);
+        View dialogView = inflater.inflate(R.layout.dialog_unified_settings, null);
         builder.setView(dialogView);
 
-        final EditText botTokenEditText = dialogView.findViewById(R.id.dialogTelegramBotTokenEditText);
-        final EditText chatIdEditText = dialogView.findViewById(R.id.dialogTelegramChatIdEditText);
+        final EditText dialogWebhookUrlEditText = dialogView.findViewById(R.id.dialogWebhookUrlEditText);
+        final EditText dialogSecretKeyEditText = dialogView.findViewById(R.id.dialogSecretKeyEditText);
+        final EditText dialogTelegramBotTokenEditText = dialogView.findViewById(R.id.dialogTelegramBotTokenEditText);
+        final EditText dialogTelegramChatIdEditText = dialogView.findViewById(R.id.dialogTelegramChatIdEditText);
+
         Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
-        Button dialogTestButton = dialogView.findViewById(R.id.dialogTestTelegramButton);
+        Button dialogTestWebhookButton = dialogView.findViewById(R.id.dialogTestWebhookButton);
+        Button dialogTestTelegramButton = dialogView.findViewById(R.id.dialogTestTelegramButton);
         Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
 
-        loadSettingsForDialog(botTokenEditText, TELEGRAM_BOT_TOKEN);
-        loadSettingsForDialog(chatIdEditText, TELEGRAM_CHAT_ID);
+        loadSettingsForDialog(dialogWebhookUrlEditText, WEBHOOK_URL);
+        loadSettingsForDialog(dialogSecretKeyEditText, SECRET_KEY);
+        loadSettingsForDialog(dialogTelegramBotTokenEditText, TELEGRAM_BOT_TOKEN);
+        loadSettingsForDialog(dialogTelegramChatIdEditText, TELEGRAM_CHAT_ID);
 
         final AlertDialog dialog = builder.create();
         Window window = dialog.getWindow();
         if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
         dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
+
         dialogSaveButton.setOnClickListener(dv_save -> {
-            String botToken = botTokenEditText.getText().toString().trim();
-            String chatId = chatIdEditText.getText().toString().trim();
-            if (botToken.isEmpty() || chatId.isEmpty()) {
-                Toast.makeText(MainActivity.this, "Bot token and Chat ID cannot be empty", Toast.LENGTH_SHORT).show();
-                return;
-            }
+            String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+            String secretKey = dialogSecretKeyEditText.getText().toString().trim();
+            String botToken = dialogTelegramBotTokenEditText.getText().toString().trim();
+            String chatId = dialogTelegramChatIdEditText.getText().toString().trim();
+
+            saveSettingsFromDialog(WEBHOOK_URL, webhookUrl);
+            saveSettingsFromDialog(SECRET_KEY, secretKey);
             saveSettingsFromDialog(TELEGRAM_BOT_TOKEN, botToken);
             saveSettingsFromDialog(TELEGRAM_CHAT_ID, chatId);
-            statusTextView.setText("Telegram settings saved");
+
+            statusTextView.setText("Settings saved");
             checkAndRequestPermissions();
             dialog.dismiss();
         });
-        dialogTestButton.setOnClickListener(dv_test -> {
-            String botToken = botTokenEditText.getText().toString().trim();
-            String chatId = chatIdEditText.getText().toString().trim();
+
+        dialogTestWebhookButton.setOnClickListener(dv_test -> {
+            String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+            String secretKey = dialogSecretKeyEditText.getText().toString().trim();
+            if (webhookUrl.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            testWebhook(webhookUrl, secretKey);
+        });
+
+        dialogTestTelegramButton.setOnClickListener(dv_test -> {
+            String botToken = dialogTelegramBotTokenEditText.getText().toString().trim();
+            String chatId = dialogTelegramChatIdEditText.getText().toString().trim();
             if (botToken.isEmpty() || chatId.isEmpty()) {
                 Toast.makeText(MainActivity.this, "Bot token and Chat ID cannot be empty for testing", Toast.LENGTH_SHORT).show();
                 return;
@@ -516,7 +490,4 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-
-
 }
