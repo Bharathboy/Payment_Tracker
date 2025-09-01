@@ -152,45 +152,27 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(newMessageReceiver);
     }
 
-        // REMOVED ViewTreeObserver block for Blurry
-        // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-        //     @Override
-        //     public void onGlobalLayout() {
-        //         rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-        //         Blurry.with(MainActivity.this)
-        //                 .radius(25)
-        //                 .sampling(2)
-        //                 .capture(rootLayout)
-        //                 .into(blurBackground);
-        //     }
-        // });
+    // REMOVED ViewTreeObserver block for Blurry
+    // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+    //     @Override
+    //     public void onGlobalLayout() {
+    //         rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+    //         Blurry.with(MainActivity.this)
+    //                 .radius(25)
+    //                 .sampling(2)
+    //                 .capture(rootLayout)
+    //                 .into(blurBackground);
+    //     }
+    // });
 
-        settingsButton.setOnClickListener(v -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-            LayoutInflater inflater = getLayoutInflater();
-            View dialogView = inflater.inflate(R.layout.dialog_webhook_settings, null);
-            builder.setView(dialogView);
-
-            final EditText dialogWebhookUrlEditText = dialogView.findViewById(R.id.dialogWebhookUrlEditText);
-            final EditText dialogSecretKeyEditText = dialogView.findViewById(R.id.dialogSecretKeyEditText);
-            Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
-            Button dialogTestButton = dialogView.findViewById(R.id.dialogTestButton);
-            Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
-
-            loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
-
-            final AlertDialog dialog = builder.create();
-
-            dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
-            
-    });
+    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
         String secretKey = sharedPreferences.getString(SECRET_KEY, "");
-
         urlEditText.setText(webhookUrl);
         keyEditText.setText(secretKey);
     }
-    
-    // Added saveSettingsFromDialog (implementation from previous interaction)
+
     private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -206,9 +188,52 @@ public class MainActivity extends AppCompatActivity {
             "+919741430392",
             "Your a/c is credited with Rs10.99 on 31-08-2025 from Test User with VPA test@upi UPI Ref No 123456789012",
             "IGNORED",
-            @Override
-            protected void onPause() {
-                super.onPause();
-                unregisterReceiver(newMessageReceiver);
-            }
+            "Aug 31, 2025 22:28"
+        ));
+        messages.add(new Message(
+            "JX-KOTAKB-S",
+            "Sent Rs.10.37 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 136056932435. Not you, https://kotak.com/KBANKT/Fraud",
+            "IGNORED",
+            "Aug 31, 2025 19:31"
+        ));
+        messages.add(new Message(
+            "JX-KOTAKB-S",
+            "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
+            "SUBMITTED",
+            "Aug 31, 2025 19:31"
+        ));
+        messages.add(new Message(
+            "JK-KOTAKB-S",
+            "Sent Rs.1.00 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 133192562435. Not you, https://kotak.com/KBANKT/Fraud",
+            "IGNORED",
+            "Aug 31, 2025 19:01"
+        ));
+        messages.add(new Message(
+            "JD-KOTAKB-S",
+            "Received Rs.1.00 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref: 133192562435.",
+            "IGNORED",
+            "Aug 31, 2025 19:01"
+        ));
+        return messages;
+    }
+
+    public void checkAndRequestSmsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) {
+            startForwardingService();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS);
+        }
+    }
+
     public void startForwardingService() {
+        Intent serviceIntent = new Intent(this, SmsForwardingService.class);
+        startForegroundService(serviceIntent);
+        statusTextView.setText(getString(R.string.status_service_running));
+        Log.d("MainActivity", "Foreground service started successfully.");
+    }
+
+    // Placeholder for performTestWebhookRequest - to be implemented fully later
+    // private void performTestWebhookRequest(String url, String key) {
+    //    // OkHttp logic will go here
+    // }
+}
