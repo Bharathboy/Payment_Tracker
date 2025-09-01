@@ -66,61 +66,25 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-        }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         // Link our Java variables to the UI elements in the XML layout
-    webhookUrlEditText = findViewById(R.id.webhookUrlEditText);
-    secretKeyEditText = findViewById(R.id.secretKeyEditText);
-    saveButton = findViewById(R.id.saveButton);
-    testButton = findViewById(R.id.testButton);
-    statusTextView = findViewById(R.id.statusTextView);
-    blurBackground = findViewById(R.id.blur_background);
-    rootLayout = findViewById(R.id.root_layout);
-    recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
+        webhookUrlEditText = findViewById(R.id.webhookUrlEditText);
+        secretKeyEditText = findViewById(R.id.secretKeyEditText);
+        saveButton = findViewById(R.id.saveButton);
+        testButton = findViewById(R.id.testButton);
+        statusTextView = findViewById(R.id.statusTextView);
+        blurBackground = findViewById(R.id.blur_background);
+        rootLayout = findViewById(R.id.root_layout);
+        recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
 
-    // Setup RecyclerView for messages
-    recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
-    messageAdapter = new MessageAdapter(getSampleMessages());
-    recyclerViewMessages.setAdapter(messageAdapter);
-    // Sample data for demonstration
-    private java.util.List<Message> getSampleMessages() {
-    java.util.List<Message> messages = new java.util.ArrayList<>();
-    messages.add(new Message(
-        "+919741430392",
-        "Your a/c is credited with Rs10.99 on 31-08-2025 from Test User with VPA test@upi UPI Ref No 123456789012",
-        "IGNORED",
-        "Aug 31, 2025 22:28"
-    ));
-    messages.add(new Message(
-        "JX-KOTAKB-S",
-        "Sent Rs.10.37 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 136056932435. Not you, https://kotak.com/KBANKT/Fraud",
-        "IGNORED",
-        "Aug 31, 2025 19:31"
-    ));
-    messages.add(new Message(
-        "JX-KOTAKB-S",
-        "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
-        "SUBMITTED",
-        "Aug 31, 2025 19:31"
-    ));
-    messages.add(new Message(
-        "JK-KOTAKB-S",
-        "Sent Rs.1.00 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 133192562435. Not you, https://kotak.com/KBANKT/Fraud",
-        "IGNORED",
-        "Aug 31, 2025 19:01"
-    ));
-    messages.add(new Message(
-        "JD-KOTAKB-S",
-        "Received Rs.1.00 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref: 133192562435.",
-        "IGNORED",
-        "Aug 31, 2025 19:01"
-    ));
-    return messages;
-    }
+        // Setup RecyclerView for messages
+        recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
+        messageAdapter = new MessageAdapter(getSampleMessages());
+        recyclerViewMessages.setAdapter(messageAdapter);
 
         // This is the key part: we wait for the layout to be drawn,
         // then we capture it, blur it, and set it as the background.
@@ -139,11 +103,46 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
         loadSettings();
 
         saveButton.setOnClickListener(v -> saveSettingsAndStartService());
         testButton.setOnClickListener(v -> sendTestWebhook());
+    }
+
+    // Sample data for demonstration
+    private java.util.List<Message> getSampleMessages() {
+        java.util.List<Message> messages = new java.util.ArrayList<>();
+        messages.add(new Message(
+            "+919741430392",
+            "Your a/c is credited with Rs10.99 on 31-08-2025 from Test User with VPA test@upi UPI Ref No 123456789012",
+            "IGNORED",
+            "Aug 31, 2025 22:28"
+        ));
+        messages.add(new Message(
+            "JX-KOTAKB-S",
+            "Sent Rs.10.37 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 136056932435. Not you, https://kotak.com/KBANKT/Fraud",
+            "IGNORED",
+            "Aug 31, 2025 19:31"
+        ));
+        messages.add(new Message(
+            "JX-KOTAKB-S",
+            "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
+            "SUBMITTED",
+            "Aug 31, 2025 19:31"
+        ));
+        messages.add(new Message(
+            "JK-KOTAKB-S",
+            "Sent Rs.1.00 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 133192562435. Not you, https://kotak.com/KBANKT/Fraud",
+            "IGNORED",
+            "Aug 31, 2025 19:01"
+        ));
+        messages.add(new Message(
+            "JD-KOTAKB-S",
+            "Received Rs.1.00 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref: 133192562435.",
+            "IGNORED",
+            "Aug 31, 2025 19:01"
+        ));
+        return messages;
     }
 
     private void saveSettingsAndStartService() {
