@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -40,69 +41,108 @@ public class SmsForwardingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand called.");
         createNotificationChannel();
+
         Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this,
-                0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent,
+                PendingIntent.FLAG_IMMUTABLE);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("SMS Forwarding Active")
                 .setContentText("Listening for incoming payment SMS...")
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.ic_notification) // replace with your drawable
                 .setContentIntent(pendingIntent)
                 .build();
 
         startForeground(1, notification);
 
         if (intent != null && intent.getExtras() != null) {
+            Log.d(TAG, "Intent received. Processing SMS messages.");
             for (SmsMessage smsMessage : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
                 String messageBody = smsMessage.getMessageBody();
                 String originatingAddress = smsMessage.getOriginatingAddress();
                 long timestampMillis = smsMessage.getTimestampMillis();
-
-                PaymentDetails details = SmsParser.parse(messageBody);
                 String dateString = String.valueOf(timestampMillis);
+
+                // Try parse
+                PaymentDetails details = SmsParser.parse(messageBody);
 
                 Message newMessage;
                 if (details != null) {
                     SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
                     String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
-                    if (webhookUrl.isEmpty()) {
+                    if (webhookUrl == null || webhookUrl.isEmpty()) {
                         Log.d(TAG, "Parsed payment SMS but no webhook URL is set.");
-                        newMessage = new Message(originatingAddress, messageBody, "WEBHOOK NOT SET", dateString);
+                        newMessage = new Message(originatingAddress, messageBody, "WEBHOOK_NOT_SET", dateString);
                     } else {
                         Log.d(TAG, "Successfully parsed payment SMS in service.");
                         sendWebhook(this, details, messageBody, webhookUrl, sharedPreferences.getString(MainActivity.SECRET_KEY, ""));
                         newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
                     }
                 } else {
-                    Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
+                    // <-- CHANGE: use IGNORED for non-matching messages
+                    Log.d(TAG, "SMS did not parse into PaymentDetails. Tagging as IGNORED. SMS body: " + messageBody);
                     newMessage = new Message(originatingAddress, messageBody, "IGNORED", dateString);
                 }
 
                 saveMessageToPrefs(newMessage);
 
+                // Broadcast both the Parcelable and fallback fields
                 Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
-                broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
+                try {
+                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not put Parcelable Message into intent.", e);
+                }
+
+                // fallback fields always present
+                broadcastIntent.putExtra("sender", originatingAddress != null ? originatingAddress : "UNKNOWN");
+                broadcastIntent.putExtra("body", messageBody != null ? messageBody : "");
+                broadcastIntent.putExtra("status", newMessage != null ? newMessage.status : "UNKNOWN");
+                broadcastIntent.putExtra("timestamp", dateString);
+
                 sendBroadcast(broadcastIntent);
                 Log.d(TAG, "New message globally broadcasted to MainActivity from sender: " + originatingAddress);
             }
         }
+
         return START_STICKY;
     }
 
+    /**
+     * Save messages as a JSON array (newest first).
+     */
     private void saveMessageToPrefs(Message message) {
         SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
-        String messagesString = sharedPreferences.getString(MainActivity.MESSAGES, "");
-        StringBuilder sb = new StringBuilder(messagesString);
-        if (!messagesString.isEmpty()) {
-            sb.append("|||"); // Delimiter
+        String messagesJson = sharedPreferences.getString(MainActivity.MESSAGES, "[]");
+        JSONArray existingArray;
+        try {
+            existingArray = new JSONArray(messagesJson);
+        } catch (Exception e) {
+            existingArray = new JSONArray();
         }
-        sb.append(message.toString());
 
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(MainActivity.MESSAGES, sb.toString());
-        editor.apply();
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put("sender", message.sender != null ? message.sender : "UNKNOWN");
+            obj.put("body", message.content != null ? message.content : "");
+            obj.put("status", message.status != null ? message.status : "UNKNOWN");
+            obj.put("timestamp", message.timestamp != null ? message.timestamp : String.valueOf(System.currentTimeMillis()));
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating message JSON", e);
+        }
+
+        JSONArray newArray = new JSONArray();
+        newArray.put(obj); // prepend newest
+        for (int i = 0; i < existingArray.length(); i++) {
+            try {
+                newArray.put(existingArray.get(i));
+            } catch (JSONException ignore) { /* skip malformed */ }
+        }
+
+        sharedPreferences.edit().putString(MainActivity.MESSAGES, newArray.toString()).apply();
+        Log.d(TAG, "Message saved to SharedPreferences successfully.");
     }
 
     private void sendWebhook(Context context, PaymentDetails details, String fullSms, String webhookUrl, String secretKey) {
@@ -126,24 +166,21 @@ public class SmsForwardingService extends Service {
         Request request = new Request.Builder()
                 .url(webhookUrl)
                 .post(body)
-                .addHeader("X-My-App-Signature", secretKey)
+                .addHeader("X-My-App-Signature", secretKey == null ? "" : secretKey)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
                 Log.e(TAG, "Webhook failed to send", e);
             }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful()) {
                     mainHandler.post(() -> Toast.makeText(context, "Webhook sent successfully", Toast.LENGTH_SHORT).show());
                 } else {
                     mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
                 }
-                Log.d(TAG, "Webhook sent. Response code: " + response.code());
+                Log.d(TAG, "Webhook response code: " + response.code());
                 response.close();
             }
         });
@@ -156,9 +193,8 @@ public class SmsForwardingService extends Service {
                 NotificationManager.IMPORTANCE_DEFAULT
         );
         NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager != null) {
-            manager.createNotificationChannel(serviceChannel);
-        }
+        if (manager != null) manager.createNotificationChannel(serviceChannel);
+        Log.d(TAG, "Notification channel created.");
     }
 
     @Nullable

@@ -30,40 +30,16 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-
 public class MainActivity extends AppCompatActivity {
-    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(WEBHOOK_URL, webhookUrl);
-        editor.putString(SECRET_KEY, secretKey);
-        editor.apply();
-        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
-    }
-    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
-        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
-        urlEditText.setText(webhookUrl);
-        keyEditText.setText(secretKey);
-    }
-
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver messageReceiver;
     private boolean isReceiverRegistered = false;
@@ -85,14 +61,24 @@ public class MainActivity extends AppCompatActivity {
                     startForwardingService();
                 } else {
                     Toast.makeText(this, "SMS Permission Denied. The app cannot function without it.", Toast.LENGTH_LONG).show();
-                    statusTextView.setText(getString(R.string.status_sms_permission_required));
+                    statusTextView.setText("SMS permission required");
                 }
             });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main); // ensure layout exists
+
+        // Defensive prefs read (in case older formats exist)
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        try {
+            sharedPreferences.getString(MESSAGES, "");
+            Log.d("MainActivity", "Reading from new data format. No action needed.");
+        } catch (ClassCastException e) {
+            sharedPreferences.edit().remove(MESSAGES).apply();
+            Log.d("MainActivity", "Detected old data format and cleared messages from SharedPreferences.");
+        }
 
         settingsButton = findViewById(R.id.settingsButton);
         statusTextView = findViewById(R.id.statusTextView);
@@ -120,11 +106,8 @@ public class MainActivity extends AppCompatActivity {
             loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
 
             final AlertDialog dialog = builder.create();
-
             Window window = dialog.getWindow();
-            if (window != null) {
-                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            }
+            if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
             dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
             dialogSaveButton.setOnClickListener(dv_save -> {
@@ -135,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 saveSettingsFromDialog(webhookUrl, secretKey);
-                statusTextView.setText(R.string.status_ready_save_settings);
+                statusTextView.setText("Settings saved");
                 checkAndRequestSmsPermission();
                 dialog.dismiss();
             });
@@ -152,6 +135,23 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(WEBHOOK_URL, webhookUrl);
+        editor.putString(SECRET_KEY, secretKey);
+        editor.apply();
+        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
+    }
+
+    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
+        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
+        urlEditText.setText(webhookUrl);
+        keyEditText.setText(secretKey);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -163,20 +163,48 @@ public class MainActivity extends AppCompatActivity {
                 public void onReceive(Context context, Intent intent) {
                     if ("com.example.paymenttracker.NEW_MESSAGE".equals(intent.getAction())) {
                         Log.d("MainActivity", "Broadcast received in MainActivity");
-                        Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
+
+                        Message newMessage = null;
+                        try {
+                            newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
+                        } catch (Exception e) {
+                            Log.w("MainActivity", "Failed to get parcelable Message from intent - will use extras fallback.", e);
+                        }
+
+                        if (newMessage == null) {
+                            String sender = intent.getStringExtra("sender");
+                            String body = intent.getStringExtra("body");
+                            String status = intent.getStringExtra("status");
+                            String timestamp = intent.getStringExtra("timestamp");
+                            if (timestamp == null) timestamp = String.valueOf(System.currentTimeMillis());
+                            if (body == null) body = "";
+                            if (sender == null) sender = "UNKNOWN";
+                            if (status == null) status = "UNKNOWN";
+
+                            // Normalize any prior INVALID_FORMAT or INVALID values to IGNORED
+                            if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
+                                status = "IGNORED";
+                            }
+
+                            newMessage = new Message(sender, body, status, timestamp);
+                            Log.d("MainActivity", "Constructed Message from extras fallback: " + body);
+                        }
+
                         if (newMessage != null) {
+                            final Message finalMsg = newMessage;
                             runOnUiThread(() -> {
-                                messagesList.add(0, newMessage);
+                                messagesList.add(0, finalMsg);
                                 messageAdapter.notifyItemInserted(0);
                                 recyclerViewMessages.scrollToPosition(0);
                             });
                             Log.d("MainActivity", "New message added: " + newMessage.content);
                         } else {
-                            Log.d("MainActivity", "Received message is null!");
+                            Log.d("MainActivity", "Received message is null even after fallback!");
                         }
                     }
                 }
             };
+
             if (android.os.Build.VERSION.SDK_INT >= 33) {
                 registerReceiver(messageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
@@ -196,36 +224,94 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * loadMessagesFromPrefs supports JSON storage (new) plus migration from old "|||"-delimited format.
+     * It also normalizes statuses so any stored INVALID_FORMAT becomes IGNORED.
+     */
     private void loadMessagesFromPrefs() {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         String messagesString = sharedPreferences.getString(MESSAGES, "");
         List<Message> loadedMessages = new ArrayList<>();
-        if (!messagesString.isEmpty()) {
-            String[] messageStrings = messagesString.split("\\|\\|\\|");
-            for (String messageString : messageStrings) {
-                loadedMessages.add(Message.fromString(messageString));
+
+        if (messagesString != null && !messagesString.isEmpty()) {
+            messagesString = messagesString.trim();
+            if (messagesString.startsWith("[")) {
+                try {
+                    JSONArray arr = new JSONArray(messagesString);
+                    for (int i = 0; i < arr.length(); i++) {
+                        try {
+                            JSONObject o = arr.getJSONObject(i);
+                            String sender = o.optString("sender", "UNKNOWN");
+                            String body = o.optString("body", "");
+                            String status = o.optString("status", "UNKNOWN");
+                            String timestamp = o.optString("timestamp", String.valueOf(System.currentTimeMillis()));
+
+                            // Normalize legacy statuses
+                            if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
+                                status = "IGNORED";
+                            }
+
+                            loadedMessages.add(new Message(sender, body, status, timestamp));
+                            Log.d("MainActivity", "Loaded message from JSON: " + body);
+                        } catch (JSONException je) {
+                            Log.w("MainActivity", "Skipping malformed JSON message entry.", je);
+                        }
+                    }
+                } catch (JSONException e) {
+                    Log.w("MainActivity", "Messages string looks like JSON but failed to parse. Clearing it.", e);
+                }
+            } else {
+                // Migration path for old "|||"-delimited format:
+                Log.d("MainActivity", "Detected old messages format — migrating to JSON storage.");
+                String[] tokens = messagesString.split("\\|\\|\\|");
+                for (int i = 0; i + 3 < tokens.length; i += 4) {
+                    String sender = tokens[i];
+                    String body = tokens[i + 1];
+                    String status = tokens[i + 2];
+                    String timestamp = tokens[i + 3];
+
+                    // Normalize legacy statuses
+                    if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
+                        status = "IGNORED";
+                    }
+
+                    loadedMessages.add(new Message(sender, body, status, timestamp));
+                    Log.d("MainActivity", "Migrated message: " + body);
+                }
+
+                // Attempt to re-save as JSON so migration runs only once
+                try {
+                    JSONArray newArr = new JSONArray();
+                    for (Message m : loadedMessages) {
+                        JSONObject o = new JSONObject();
+                        o.put("sender", m.sender != null ? m.sender : "UNKNOWN");
+                        o.put("body", m.content != null ? m.content : "");
+                        o.put("status", m.status != null ? m.status : "UNKNOWN");
+                        o.put("timestamp", m.timestamp != null ? m.timestamp : String.valueOf(System.currentTimeMillis()));
+                        newArr.put(o);
+                    }
+                    sharedPreferences.edit().putString(MESSAGES, newArr.toString()).apply();
+                    Log.d("MainActivity", "Migration complete — saved messages back as JSON.");
+                } catch (JSONException e) {
+                    Log.e("MainActivity", "Failed to migrate old messages format.", e);
+                }
             }
         }
 
         Collections.sort(loadedMessages, new Comparator<Message>() {
             @Override
             public int compare(Message m1, Message m2) {
-                try {
-                    long t1 = Long.parseLong(m1.timestamp);
-                    long t2 = Long.parseLong(m2.timestamp);
-                    return Long.compare(t2, t1);
-                } catch (NumberFormatException e) {
-                    return 0;
-                }
+                long t1 = 0, t2 = 0;
+                try { t1 = Long.parseLong(m1.timestamp); } catch (Exception ignored) {}
+                try { t2 = Long.parseLong(m2.timestamp); } catch (Exception ignored) {}
+                return Long.compare(t2, t1);
             }
         });
 
         messagesList.clear();
         messagesList.addAll(loadedMessages);
-        if (messageAdapter != null) {
-            messageAdapter.notifyDataSetChanged();
-        }
-        Log.d("MainActivity", "Loaded " + messagesList.size() + " messages from prefs.");
+        if (messageAdapter != null) messageAdapter.notifyDataSetChanged();
+        Log.d("MainActivity", "Loaded " + messagesList.size() + " messages from prefs and sorted them.");
     }
 
     public void checkAndRequestSmsPermission() {
@@ -239,49 +325,40 @@ public class MainActivity extends AppCompatActivity {
     public void startForwardingService() {
         Intent serviceIntent = new Intent(this, SmsForwardingService.class);
         startForegroundService(serviceIntent);
-        statusTextView.setText(getString(R.string.status_service_running));
+        statusTextView.setText("Service running");
         Log.d("MainActivity", "Foreground service started successfully.");
     }
 
     private void testWebhook(String webhookUrl, String secretKey) {
-        JSONObject jsonPayload = new JSONObject();
-        try {
-            jsonPayload.put("amount_received", "1.00");
-            jsonPayload.put("upi_ref_id", "TEST1234567890");
-            jsonPayload.put("sender_name", "Test User");
-            jsonPayload.put("sender_vpa", "test@upi");
-            jsonPayload.put("full_sms_body", "This is a test message from your app.");
-        } catch (JSONException e) {
-            mainHandler.post(() -> Toast.makeText(MainActivity.this, "Error creating test payload", Toast.LENGTH_SHORT).show());
-            return;
-        }
-
-        OkHttpClient client = new OkHttpClient();
-        MediaType JSON = MediaType.get("application/json; charset=utf-8");
-        RequestBody body = RequestBody.create(jsonPayload.toString(), JSON);
-
-        Request request = new Request.Builder()
-                .url(webhookUrl)
-                .post(body)
-                .addHeader("X-My-App-Signature", secretKey)
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
-                Log.e("MainActivity", "Test webhook failed", e);
+        // Simple test payload executed on a background thread
+        Thread t = new Thread(() -> {
+            okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+            org.json.JSONObject jsonPayload = new org.json.JSONObject();
+            try {
+                jsonPayload.put("amount_received", "1.00");
+                jsonPayload.put("upi_ref_id", "TEST1234567890");
+                jsonPayload.put("sender_name", "Test User");
+                jsonPayload.put("sender_vpa", "test@upi");
+                jsonPayload.put("full_sms_body", "This is a test message from your app.");
+            } catch (org.json.JSONException e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error creating test payload", Toast.LENGTH_SHORT).show());
+                return;
             }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Successful! Response: " + response.code(), Toast.LENGTH_LONG).show());
-                } else {
-                    mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Failed with Code: " + response.code(), Toast.LENGTH_LONG).show());
-                }
-                response.close();
+            okhttp3.MediaType JSON = okhttp3.MediaType.get("application/json; charset=utf-8");
+            okhttp3.RequestBody body = okhttp3.RequestBody.create(jsonPayload.toString(), JSON);
+            okhttp3.Request request = new okhttp3.Request.Builder()
+                    .url(webhookUrl)
+                    .post(body)
+                    .addHeader("X-My-App-Signature", secretKey == null ? "" : secretKey)
+                    .build();
+            try (okhttp3.Response response = client.newCall(request).execute()) {
+                final boolean ok = response.isSuccessful();
+                final int code = response.code();
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, ok ? "Test Webhook OK: " + code : "Test Webhook Failed: " + code, Toast.LENGTH_LONG).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Test webhook error: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         });
+        t.start();
     }
 }
