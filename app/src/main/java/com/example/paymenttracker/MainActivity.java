@@ -2,6 +2,7 @@
 package com.example.paymenttracker;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,11 +53,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (!isReceiverRegistered) {
             IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(newMessageReceiver, filter, Context.RECEIVER_EXPORTED);
-            } else {
-                registerReceiver(newMessageReceiver, filter);
-            }
+            LocalBroadcastManager.getInstance(this).registerReceiver(newMessageReceiver, filter);
             isReceiverRegistered = true;
         }
     }
@@ -170,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         if (isReceiverRegistered) {
-            unregisterReceiver(newMessageReceiver);
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(newMessageReceiver);
             isReceiverRegistered = false;
         }
     }

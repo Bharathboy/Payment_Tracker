@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent; // Ensure this import is present
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.content.SharedPreferences;
 import android.os.IBinder;
 // android.os.Message import removed
@@ -64,13 +65,12 @@ public class SmsForwardingService extends Service {
                     sendWebhook(this, details, messageBody);
 
                     String dateString = String.valueOf(timestampMillis);
-                    // Corrected to use your com.example.paymenttracker.Message class
                     com.example.paymenttracker.Message newMessage = new com.example.paymenttracker.Message(originatingAddress, messageBody, "Received", dateString);
 
                     Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
                     broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
-                    sendBroadcast(broadcastIntent);
-                    Log.d(TAG, "New message broadcasted to MainActivity from sender: " + originatingAddress);
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
+                    Log.d(TAG, "New message LocalBroadcasted to MainActivity from sender: " + originatingAddress);
                 } else {
                     Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
                     /*
