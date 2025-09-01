@@ -336,29 +336,41 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkBatteryOptimization() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Intent intent = new Intent();
             String packageName = getPackageName();
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
             if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
-                showBatteryOptimizationDialog(packageName, intent);
+                showBatteryOptimizationDialog();
             }
         }
     }
 
-    private void showBatteryOptimizationDialog(String packageName, Intent intent) {
+    private void showBatteryOptimizationDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Disable Battery Optimization");
-        builder.setMessage("For Payment Tracker to work reliably in the background, please disable battery optimization for this app.");
-        builder.setPositiveButton("Go to Settings", (dialog, which) -> {
-            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-            intent.setData(Uri.parse("package:" + packageName));
-            startActivity(intent);
-        });
-        builder.setNegativeButton("Cancel", (dialog, which) -> {
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_battery_optimization, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        Window window = dialog.getWindow();
+        if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+        Button dialogSettingsButton = dialogView.findViewById(R.id.dialogSettingsButton);
+
+        dialogCancelButton.setOnClickListener(v -> {
             dialog.dismiss();
             Toast.makeText(this, "Battery optimization is enabled. The app may be killed by the system.", Toast.LENGTH_LONG).show();
         });
-        AlertDialog dialog = builder.create();
+
+        dialogSettingsButton.setOnClickListener(v -> {
+            Intent intent = new Intent();
+            String packageName = getPackageName();
+            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + packageName));
+            startActivity(intent);
+            dialog.dismiss();
+        });
+
         dialog.show();
     }
 

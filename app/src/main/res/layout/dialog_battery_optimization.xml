@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/glass_panel_background">
+
+    <TextView
+        android:id="@+id/dialogTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Disable Battery Optimization"
+        android:fontFamily="@font/roboto_bold"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/dialogMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="For Payment Tracker to work reliably in the background, please disable battery optimization for this app."
+        android:textColor="@android:color/white"
+        android:fontFamily="@font/roboto_regular"
+        android:textSize="14sp"
+        android:layout_marginBottom="24dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/dialogCancelButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/roboto_regular"
+            android:background="@drawable/button_dynamic_background"
+            android:layout_marginEnd="16dp"
+            android:padding="12dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"/>
+
+        <Button
+            android:id="@+id/dialogSettingsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go to Settings"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/roboto_bold"
+            android:background="@drawable/gradient_button"
+            android:padding="12dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"/>
+    </LinearLayout>
+</LinearLayout>
