@@ -3,11 +3,14 @@
     <!-- Your new dark theme color palette -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="app_background">#121212</color> <!-- Dark background -->
-    <color name="card_background">#1E1E1E</color> <!-- Slightly lighter card background -->
-    <color name="text_primary">#E0E0E0</color> <!-- Light grey for primary text -->
-    <color name="text_secondary">#A0A0A0</color> <!-- Dimmer grey for hints -->
-    <color name="accent_color">#43E97B</color> <!-- Vibrant green accent -->
-    <color name="gradient_start">#38F9D7</color> <!-- Modern gradient start -->
-    <color name="gradient_end">#43E97B</color> <!-- Modern gradient end -->
+    <color name="app_background">#101A24</color> <!-- Messaging app dark blue background -->
+    <color name="card_background">#182C3A</color> <!-- Card/chat bubble background -->
+    <color name="text_primary">#FFFFFF</color> <!-- White for primary text -->
+    <color name="text_secondary">#B0BEC5</color> <!-- Soft blue-grey for hints -->
+    <color name="accent_color">#1E88E5</color> <!-- Messaging blue accent -->
+    <color name="gradient_start">#42A5F5</color> <!-- Blue gradient start -->
+    <color name="gradient_end">#00B8D4</color> <!-- Teal gradient end -->
+    <color name="bubble_sent">#1E88E5</color> <!-- Sent message bubble -->
+    <color name="bubble_received">#263238</color> <!-- Received message bubble -->
+    <color name="divider">#223344</color> <!-- Divider color -->
 </resources>
