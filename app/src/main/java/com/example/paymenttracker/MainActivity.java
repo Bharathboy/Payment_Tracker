@@ -52,7 +52,11 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (!isReceiverRegistered) {
             IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
-            registerReceiver(newMessageReceiver, filter);
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(newMessageReceiver, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(newMessageReceiver, filter);
+            }
             isReceiverRegistered = true;
         }
     }
