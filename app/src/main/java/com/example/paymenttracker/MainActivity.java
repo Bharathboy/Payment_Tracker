@@ -9,9 +9,13 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager; // Added this import
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -38,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -54,23 +59,30 @@ public class MainActivity extends AppCompatActivity {
     public static final String SECRET_KEY = "secretKey";
     public static final String MESSAGES = "messages";
 
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    Toast.makeText(this, "SMS Permission Granted!", Toast.LENGTH_SHORT).show();
+    private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
+                boolean allPermissionsGranted = true;
+                for (Boolean isGranted : permissions.values()) {
+                    if (!isGranted) {
+                        allPermissionsGranted = false;
+                        break;
+                    }
+                }
+
+                if (allPermissionsGranted) {
+                    Toast.makeText(this, "Permissions Granted!", Toast.LENGTH_SHORT).show();
                     startForwardingService();
                 } else {
-                    Toast.makeText(this, "SMS Permission Denied. The app cannot function without it.", Toast.LENGTH_LONG).show();
-                    statusTextView.setText("SMS permission required");
+                    Toast.makeText(this, "All required permissions were not granted. App may not function correctly.", Toast.LENGTH_LONG).show();
+                    statusTextView.setText("Permissions required");
                 }
             });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main); // ensure layout exists
+        setContentView(R.layout.activity_main);
 
-        // Defensive prefs read (in case older formats exist)
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         try {
             sharedPreferences.getString(MESSAGES, "");
@@ -89,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         messageAdapter = new MessageAdapter(messagesList);
         recyclerViewMessages.setAdapter(messageAdapter);
 
-        checkAndRequestSmsPermission();
+        checkAndRequestPermissions();
 
         settingsButton.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -119,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 saveSettingsFromDialog(webhookUrl, secretKey);
                 statusTextView.setText("Settings saved");
-                checkAndRequestSmsPermission();
+                checkAndRequestPermissions();
                 dialog.dismiss();
             });
             dialogTestButton.setOnClickListener(dv_test -> {
@@ -181,7 +193,6 @@ public class MainActivity extends AppCompatActivity {
                             if (sender == null) sender = "UNKNOWN";
                             if (status == null) status = "UNKNOWN";
 
-                            // Normalize any prior INVALID_FORMAT or INVALID values to IGNORED
                             if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
                                 status = "IGNORED";
                             }
@@ -205,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
 
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(messageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
                 registerReceiver(messageReceiver, filter);
@@ -224,10 +235,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * loadMessagesFromPrefs supports JSON storage (new) plus migration from old "|||"-delimited format.
-     * It also normalizes statuses so any stored INVALID_FORMAT becomes IGNORED.
-     */
     private void loadMessagesFromPrefs() {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         String messagesString = sharedPreferences.getString(MESSAGES, "");
@@ -246,7 +253,6 @@ public class MainActivity extends AppCompatActivity {
                             String status = o.optString("status", "UNKNOWN");
                             String timestamp = o.optString("timestamp", String.valueOf(System.currentTimeMillis()));
 
-                            // Normalize legacy statuses
                             if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
                                 status = "IGNORED";
                             }
@@ -261,7 +267,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.w("MainActivity", "Messages string looks like JSON but failed to parse. Clearing it.", e);
                 }
             } else {
-                // Migration path for old "|||"-delimited format:
                 Log.d("MainActivity", "Detected old messages format — migrating to JSON storage.");
                 String[] tokens = messagesString.split("\\|\\|\\|");
                 for (int i = 0; i + 3 < tokens.length; i += 4) {
@@ -270,7 +275,6 @@ public class MainActivity extends AppCompatActivity {
                     String status = tokens[i + 2];
                     String timestamp = tokens[i + 3];
 
-                    // Normalize legacy statuses
                     if ("INVALID_FORMAT".equalsIgnoreCase(status) || "INVALID".equalsIgnoreCase(status)) {
                         status = "IGNORED";
                     }
@@ -279,7 +283,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("MainActivity", "Migrated message: " + body);
                 }
 
-                // Attempt to re-save as JSON so migration runs only once
                 try {
                     JSONArray newArr = new JSONArray();
                     for (Message m : loadedMessages) {
@@ -298,14 +301,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Collections.sort(loadedMessages, new Comparator<Message>() {
-            @Override
-            public int compare(Message m1, Message m2) {
-                long t1 = 0, t2 = 0;
-                try { t1 = Long.parseLong(m1.timestamp); } catch (Exception ignored) {}
-                try { t2 = Long.parseLong(m2.timestamp); } catch (Exception ignored) {}
-                return Long.compare(t2, t1);
-            }
+        Collections.sort(loadedMessages, (m1, m2) -> {
+            long t1 = 0, t2 = 0;
+            try { t1 = Long.parseLong(m1.timestamp); } catch (Exception ignored) {}
+            try { t2 = Long.parseLong(m2.timestamp); } catch (Exception ignored) {}
+            return Long.compare(t2, t1);
         });
 
         messagesList.clear();
@@ -314,12 +314,52 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MainActivity", "Loaded " + messagesList.size() + " messages from prefs and sorted them.");
     }
 
-    public void checkAndRequestSmsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) {
-            startForwardingService();
-        } else {
-            requestPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS);
+    public void checkAndRequestPermissions() {
+        List<String> permissionsToRequest = new ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.RECEIVE_SMS);
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+
+        if (!permissionsToRequest.isEmpty()) {
+            requestPermissionsLauncher.launch(permissionsToRequest.toArray(new String[0]));
+        } else {
+            startForwardingService();
+            checkBatteryOptimization();
+        }
+    }
+
+    private void checkBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Intent intent = new Intent();
+            String packageName = getPackageName();
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                showBatteryOptimizationDialog(packageName, intent);
+            }
+        }
+    }
+
+    private void showBatteryOptimizationDialog(String packageName, Intent intent) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Disable Battery Optimization");
+        builder.setMessage("For Payment Tracker to work reliably in the background, please disable battery optimization for this app.");
+        builder.setPositiveButton("Go to Settings", (dialog, which) -> {
+            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + packageName));
+            startActivity(intent);
+        });
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.dismiss();
+            Toast.makeText(this, "Battery optimization is enabled. The app may be killed by the system.", Toast.LENGTH_LONG).show();
+        });
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     public void startForwardingService() {
@@ -330,7 +370,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void testWebhook(String webhookUrl, String secretKey) {
-        // Simple test payload executed on a background thread
         Thread t = new Thread(() -> {
             okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
             org.json.JSONObject jsonPayload = new org.json.JSONObject();
@@ -362,4 +401,3 @@ public class MainActivity extends AppCompatActivity {
         t.start();
     }
 }
-
