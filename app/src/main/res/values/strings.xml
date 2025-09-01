@@ -27,7 +27,9 @@
 
     <string name="telegram_settings_title">Telegram Settings</string>
     <string name="telegram_bot_token_hint">Enter Telegram Bot Token</string>
-    <string name="telegram_chat_id_hint">Enter Chat ID (or User ID)</string>
+    <string name="telegram_chat_id_hint">Enter Chat ID With Prefix -100</string>
     <string name="save">Save</string>
     <string name="test_button_text">Test</string>
+
+    <string name="empty_state_message">New messages will appear here.</string>
 </resources>

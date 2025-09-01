@@ -1,148 +1,447 @@
 package com.example.paymenttracker;
 
+import android.util.Log;
+
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * SmsParser - robust parser that tries to populate your package-level PaymentDetails
- * using reflection so it works whether PaymentDetails.amount is BigDecimal or String,
- * whether rawAmount exists or not, and whether fields are public or accessible via setters.
- *
- * Returns null unless a known payment pattern is found (amount + at least one of ref/vpa/sender).
- */
 public class SmsParser {
+    private static final Pattern PAYMENT_KEYWORDS = Pattern.compile(
+            "(?i)(?:credited|debited|paid|txn for|transferred|received|sent|upi|imps|neft|rtgs|otp for)"
+    );
 
-    // Patterns used in a layered extraction approach
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(?i)(?:Rs\\.?|INR|₹)\\s*([\\d,]+(?:\\.\\d{1,2})?)");
-    private static final Pattern REF_PATTERN = Pattern.compile("(?i)(?:UPI\\s*Ref(?:\\s*No)?|Ref\\.No|Ref\\s*No|Ref|Txn ID|TXN ID)[:\\s-]*([A-Za-z0-9-]+)");
-    private static final Pattern VPA_PATTERN = Pattern.compile("(?i)\\b([\\w.+-]+@[\\w.-]+)\\b"); // typical vpa like somebody@upi
-    private static final Pattern SENDER_FROM_PATTERN = Pattern.compile("(?i)\\bfrom\\s+([^\\n,\\(]+)");
-    private static final Pattern SENDER_BY_PATTERN = Pattern.compile("(?i)\\bby\\s+([^\\n,\\(]+)");
-    private static final Pattern CREDITED_TO_PATTERN = Pattern.compile("(?i)credited (?:to|with)\\s+([^\\n,\\(]+)");
-    private static final Pattern RECEIVED_FROM_PATTERN = Pattern.compile("(?i)received from\\s+([^\\n,\\(]+)");
 
-    /**
-     * Attempt to parse an SMS body for payment-related info.
-     *
-     * @param smsBody raw SMS text
-     * @return com.example.paymenttracker.PaymentDetails if a known payment pattern is found; otherwise null
-     */
+    private static final Pattern RECEIVED_KEYWORDS = Pattern.compile(
+            "(?i)(?:credited|received|to)"
+    );
+    private static final Pattern SENT_KEYWORDS = Pattern.compile(
+            "(?i)(?:debited|sent|paid|from)"
+    );
+
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile(
+            "(?i)(?:\\b(?:Rs\\.?|INR|₹)\\b\\s*)?([0-9]+(?:,[0-9]{3})*(?:\\.\\d{1,2})?|[0-9]+(?:\\.\\d{1,2})?)"
+    );
+
+    private static final Pattern AMOUNT_CONTEXT_PATTERN = Pattern.compile(
+            "(?i)(?:credited|debited|paid|txn for|transferred|received|amount)\\s*(?:of|by|with|:)?\\s*(?:Rs\\.?|INR|₹)?\\s*([0-9]+(?:,[0-9]{3})*(?:\\.\\d{1,2})?|[0-9]+(?:\\.\\d{1,2})?)"
+    );
+
+    private static final Pattern REF_PATTERN = Pattern.compile(
+            "(?i)(?:UPI\\s*Ref(?:\\s*No)?|Ref\\.No|Ref\\s*No|Ref\\b|Txn ID|TXN ID|TxN|TXN|TRANS ID|Transaction ID)[:\\s-]*([A-Za-z0-9\\-]{4,40})"
+    );
+
+    private static final Pattern LOOSE_REF_CANDIDATE = Pattern.compile("\\b([A-Za-z0-9\\-]{6,40})\\b");
+
+    private static final Pattern VPA_PATTERN = Pattern.compile("(?i)\\b([A-Za-z0-9._%+\\-]+@[A-Za-z0-9.-]+)\\b");
+
+    private static final Pattern SENDER_FROM_PATTERN = Pattern.compile("(?i)\\bfrom\\s+([^\\n,\\.\\(]+)");
+    private static final Pattern SENDER_BY_PATTERN = Pattern.compile("(?i)\\bby\\s+([^\\n,\\.\\(]+)");
+    private static final Pattern SENDER_BENEFICIARY_PATTERN = Pattern.compile("(?i)\\b(beneficiary|beneficiary name|credited to|credited)\\s+([^\\n,\\.\\(]+)");
+    private static final Pattern RECEIVED_FROM_PATTERN = Pattern.compile("(?i)received\\s+(?:by|from)\\s+([^\\n,\\.\\(]+)");
+    private static final Pattern CREDITED_TO_PATTERN = Pattern.compile("(?i)credited\\s+(?:to|with)\\s+([^\\n,\\.\\(]+)");
+
+    private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
+            DateTimeFormatter.ofPattern("d-M-uu"),
+            DateTimeFormatter.ofPattern("d-M-uuuu"),
+            DateTimeFormatter.ofPattern("d/M/uu"),
+            DateTimeFormatter.ofPattern("d/M/uuuu"),
+            DateTimeFormatter.ofPattern("uuuu-M-d"),
+            DateTimeFormatter.ofPattern("uuuu/M/d")
+    );
+    private static final Pattern DATE_CANDIDATE = Pattern.compile("\\b(\\d{1,4}[\\-/]\\d{1,2}[\\-/]\\d{1,4})\\b");
+
+    private static final Pattern BANK_PATTERN = Pattern.compile("(?i)\\b(Kotak|Axis|HDFC|ICICI|SBI|Airtel Payments)(?:\\s+(?:Bank|AC|A/c|A/c|Account|Acct))?\\b");
+
+    private static final Pattern ACCOUNT_TOKEN_PATTERN = Pattern.compile("(?:\\bX?\\*{0,4}\\d{2,}\\b|\\bAC\\b|\\bA/c\\b|\\bAcct\\b|\\bAccount\\b|\\b\\d{3,}\\b)", Pattern.CASE_INSENSITIVE);
+
+    private static final Map<String, String> BANK_NORMALIZATION;
+    static {
+        Map<String, String> m = new HashMap<>();
+        m.put("kotak", "Kotak Mahindra Bank");
+        m.put("kotak mahindra", "Kotak Mahindra Bank");
+        m.put("hdfc", "HDFC Bank");
+        m.put("hdfc bank", "HDFC Bank");
+        m.put("icici", "ICICI Bank");
+        m.put("icici bank", "ICICI Bank");
+        m.put("axis", "Axis Bank");
+        m.put("axis bank", "Axis Bank");
+        m.put("sbi", "State Bank of India");
+        m.put("state bank", "State Bank of India");
+        m.put("state bank of india", "State Bank of India");
+        m.put("pnb", "Punjab National Bank");
+        m.put("punjab national", "Punjab National Bank");
+        m.put("punjab national bank", "Punjab National Bank");
+        m.put("bank of baroda", "Bank of Baroda");
+        m.put("bob", "Bank of Baroda");
+        m.put("canara", "Canara Bank");
+        m.put("canara bank", "Canara Bank");
+        m.put("yes bank", "Yes Bank");
+        m.put("indusind", "IndusInd Bank");
+        m.put("indusind bank", "IndusInd Bank");
+        m.put("idbi", "IDBI Bank");
+        m.put("idbi bank", "IDBI Bank");
+        m.put("rbl", "RBL Bank");
+        m.put("rbl bank", "RBL Bank");
+        m.put("federal", "Federal Bank");
+        m.put("federal bank", "Federal Bank");
+        m.put("union bank", "Union Bank of India");
+        m.put("union bank of india", "Union Bank of India");
+        m.put("bank of india", "Bank of India");
+        m.put("bank of maharashtra", "Bank of Maharashtra");
+        m.put("indian bank", "Indian Bank");
+        m.put("indian overseas bank", "Indian Overseas Bank");
+        m.put("idfc", "IDFC FIRST Bank");
+        m.put("idfc first", "IDFC FIRST Bank");
+        m.put("au", "AU Small Finance Bank");
+        m.put("au small", "AU Small Finance Bank");
+        m.put("au small finance", "AU Small Finance Bank");
+        m.put("south indian", "South Indian Bank");
+        m.put("south indian bank", "South Indian Bank");
+        m.put("bandhan", "Bandhan Bank");
+        m.put("bandhan bank", "Bandhan Bank");
+        m.put("csb", "CSB Bank");
+        m.put("csb bank", "CSB Bank");
+        m.put("airtel payments", "Airtel Payments Bank");
+        m.put("airtel payments bank", "Airtel Payments Bank");
+        m.put("paytm", "Paytm Payments Bank");
+        m.put("paytm payments", "Paytm Payments Bank");
+        m.put("paytm payments bank", "Paytm Payments Bank");
+        m.put("india post", "India Post Payments Bank");
+        m.put("india post payments", "India Post Payments Bank");
+        m.put("karnataka", "Karnataka Bank");
+        m.put("karnataka bank", "Karnataka Bank");
+        BANK_NORMALIZATION = Collections.unmodifiableMap(m);
+    }
+
+    private static final Set<String> IGNORED_BANK_WORDS = new HashSet<>(Arrays.asList("your", "my", "our", "in", "to", "a", "the"));
+
     public static PaymentDetails parse(String smsBody) {
         if (smsBody == null || smsBody.trim().isEmpty()) return null;
 
-        String s = smsBody.trim();
+        Map<String, Object> map = parseToMap(smsBody);
+        if (map == null) return null;
 
-        // 1) Amount (string form)
-        String amountString = null;
-        BigDecimal amountBig = null;
-        Matcher mAmt = AMOUNT_PATTERN.matcher(s);
-        if (mAmt.find()) {
-            amountString = mAmt.group(1);
-            amountBig = parseAmountToBigDecimal(amountString);
+        Object amountVal = map.get("amountBig");
+        String amountRaw = (String) map.get("rawAmount");
+        String ref = (String) map.get("upiRefId");
+        String vpa = (String) map.get("senderVpa");
+        String sender = (String) map.get("senderName");
+
+        boolean hasAmount = amountVal != null || (amountRaw != null && !amountRaw.isEmpty());
+        boolean hasRefOrVpaOrName = (ref != null && !ref.isEmpty()) || (vpa != null && !vpa.isEmpty()) || (sender != null && !sender.isEmpty());
+        if (!hasAmount || !hasRefOrVpaOrName) {
+            return null;
         }
 
-        // 2) UPI / reference id
-        String upiRefId = null;
-        Matcher mRef = REF_PATTERN.matcher(s);
-        if (mRef.find()) {
-            upiRefId = mRef.group(1).trim();
-        } else {
-            Matcher looseRef = Pattern.compile("\\b([A-Za-z0-9]{8,30})\\b").matcher(s);
-            while (looseRef.find()) {
-                String candidate = looseRef.group(1);
-                // skip obvious amounts (pure digits)
-                if (candidate.matches("\\d+")) continue;
-                if (candidate.matches(".*[A-Za-z-].*")) {
-                    upiRefId = candidate;
-                    break;
+        PaymentDetails details = instantiatePaymentDetails();
+        if (details == null) {
+            return null;
+        }
+
+        safeSet(details, "amount", amountVal != null ? amountVal : amountRaw);
+        safeSet(details, "rawAmount", amountRaw);
+        safeSet(details, "senderName", sender);
+        safeSet(details, "senderVpa", vpa);
+        safeSet(details, "upiRefId", ref);
+        safeSet(details, "dateTime", map.get("dateTime"));
+        safeSet(details, "bank", map.get("bank"));
+
+        return details;
+    }
+
+    public static Map<String, Object> parseToMap(String smsBody) {
+        if (smsBody == null) return null;
+        String s = sanitizeSmsBody(smsBody);
+
+        boolean isReceived = RECEIVED_KEYWORDS.matcher(s).find();
+        boolean isSent = SENT_KEYWORDS.matcher(s).find();
+
+        // This is the core logic that prevents non-payment messages from being matched
+        // Returns null if only a sent keyword is found, or if no payment keywords are present.
+        boolean hasPaymentKeyword = PAYMENT_KEYWORDS.matcher(s).find();
+
+        if (!hasPaymentKeyword) {
+            return null;
+        }
+        if (!isReceived) {
+            return null;
+        }
+
+
+
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("fullSmsBody", smsBody);
+
+        String amountRaw = null;
+        BigDecimal amountBig = null;
+
+        Matcher mCtx = AMOUNT_CONTEXT_PATTERN.matcher(s);
+        if (mCtx.find()) {
+            amountRaw = cleanAmountGroup(mCtx.group(1));
+            amountBig = parseAmountToBigDecimal(amountRaw);
+        }
+
+        if (amountBig == null) {
+            Matcher mAmt = AMOUNT_PATTERN.matcher(s);
+            while (mAmt.find()) {
+                String cand = cleanAmountGroup(mAmt.group(1));
+                if (cand != null && cand.length() > 0) {
+                    int start = mAmt.start(1);
+                    boolean likelyDate = false;
+                    if (start > 0) {
+                        char before = s.charAt(start - 1);
+                        if (before == '-' || before == '/') likelyDate = true;
+                    }
+                    if (!likelyDate) {
+                        amountRaw = cand;
+                        amountBig = parseAmountToBigDecimal(cand);
+                        if (amountBig != null) break;
+                    }
                 }
             }
         }
 
-        // 3) VPA (if present anywhere)
+        out.put("rawAmount", amountRaw);
+        out.put("amountBig", amountBig);
+
+        String upiRef = null;
+        Matcher mRef = REF_PATTERN.matcher(s);
+        if (mRef.find()) {
+            upiRef = trimAlphaNum(mRef.group(1));
+        }
+        if (upiRef == null || upiRef.length() < 4) {
+            Matcher mLoose = LOOSE_REF_CANDIDATE.matcher(s);
+            while (mLoose.find()) {
+                String cand = mLoose.group(1);
+                if (cand == null) continue;
+                if (cand.matches("^\\d+$")) continue;
+                if (amountRaw != null && cand.replace(",", "").equals(amountRaw.replace(",", ""))) continue;
+                if (cand.length() >= 6) {
+                    upiRef = cand;
+                    break;
+                }
+            }
+        }
+        out.put("upiRefId", upiRef);
+
         String vpa = null;
         Matcher mVpa = VPA_PATTERN.matcher(s);
         if (mVpa.find()) {
             vpa = mVpa.group(1).trim();
         }
+        out.put("senderVpa", vpa);
 
-        // 4) Sender name - try several heuristics
-        String senderName = extractSenderName(s);
+        String sender = extractSenderNameBetter(s);
+        out.put("senderName", sender);
 
-        // If no amount or none of the other identifiers, must return null (per your request)
-        boolean hasAmount = amountBig != null || (amountString != null && !amountString.isEmpty());
-        boolean hasRefOrVpaOrName = (upiRefId != null && !upiRefId.isEmpty())
-                || (vpa != null && !vpa.isEmpty())
-                || (senderName != null && !senderName.isEmpty());
+        String isoDate = extractDateIso(s);
+        out.put("dateTime", isoDate);
 
-        if (!hasAmount || !hasRefOrVpaOrName) {
-            return null;
-        }
+        String bank = extractBank(s);
+        out.put("bank", bank);
 
-        // Build and populate package-level PaymentDetails using reflection (works with String or BigDecimal etc.)
-        PaymentDetails details = instantiatePaymentDetails();
-        if (details == null) {
-            // Could not instantiate; return null to avoid NPE in caller
-            return null;
-        }
-
-        // Try to set fields or call setters if they exist. Tolerant behavior: missing fields are ignored.
-        safeSet(details, "amount", amountBig != null ? amountBig : amountString);
-        safeSet(details, "rawAmount", amountString);
-        safeSet(details, "senderName", senderName);
-        safeSet(details, "senderVpa", vpa);
-        safeSet(details, "upiRefId", upiRefId);
-
-        return details;
+        return out;
     }
 
-    // instantiate PaymentDetails via no-arg constructor
+    private static String sanitizeSmsBody(String s) {
+        if (s == null) return null;
+        String cleaned = s.replace("\r", " ").replace("\n", " ").replaceAll("\\s+", " ").trim();
+        cleaned = cleaned.replaceAll("(?i)(Rs|INR|₹)(?=\\d)", "$1 ");
+        return cleaned;
+    }
+
+    private static String cleanAmountGroup(String raw) {
+        if (raw == null) return null;
+        return raw.replaceAll("[^0-9.]", "");
+    }
+
+    private static BigDecimal parseAmountToBigDecimal(String raw) {
+        if (raw == null) return null;
+        String cleaned = raw.replace(",", "").trim();
+        if (cleaned.isEmpty()) return null;
+        try {
+            return new BigDecimal(cleaned);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String trimAlphaNum(String s) {
+        if (s == null) return null;
+        return s.trim().replaceAll("[^A-Za-z0-9\\-]", "");
+    }
+
+    private static String extractSenderNameBetter(String s) {
+        if (s == null) return null;
+
+        List<Pattern> patterns = Arrays.asList(
+                RECEIVED_FROM_PATTERN,
+                SENDER_FROM_PATTERN,
+                SENDER_BY_PATTERN,
+                SENDER_BENEFICIARY_PATTERN,
+                CREDITED_TO_PATTERN
+        );
+
+        for (Pattern p : patterns) {
+            Matcher m = p.matcher(s);
+            if (m.find()) {
+                String cand;
+                if (m.groupCount() >= 2 && p == SENDER_BENEFICIARY_PATTERN) {
+                    cand = m.group(2);
+                } else {
+                    cand = m.group(1);
+                }
+                if (cand == null) continue;
+                cand = cand.trim();
+                cand = cand.replaceAll("(?i)\\b(on\\s+\\d{1,2}[\\-/]\\d{1,2}[\\-/]\\d{2,4}|UPI\\s*Ref\\b.*|via\\s+[^\\s,]+|with\\s+[^\\s,]+)$", "").trim();
+                cand = ACCOUNT_TOKEN_PATTERN.matcher(cand).replaceAll("").trim();
+                if (cand.matches("^\\d+$")) continue;
+                if (VPA_PATTERN.matcher(cand).find()) continue;
+                cand = cand.replaceAll("\\s{2,}", " ").trim();
+                if (!cand.isEmpty()) return cand;
+            }
+        }
+
+        Matcher nearUpi = Pattern.compile("([A-Za-z .]{2,40})\\s+UPI", Pattern.CASE_INSENSITIVE).matcher(s);
+        if (nearUpi.find()) {
+            String cand = nearUpi.group(1).trim();
+            if (!cand.isEmpty() && !VPA_PATTERN.matcher(cand).find()) return cand;
+        }
+
+        return null;
+    }
+
+    private static String extractDateIso(String s) {
+        if (s == null) return null;
+        Matcher m = DATE_CANDIDATE.matcher(s);
+        while (m.find()) {
+            String cand = m.group(1).trim();
+            String normalized = cand.replace('/', '-');
+            for (DateTimeFormatter fmt : DATE_FORMATTERS) {
+                try {
+                    LocalDate ld = LocalDate.parse(normalized, fmt);
+                    return ld.toString();
+                } catch (DateTimeParseException ignored) {
+                }
+            }
+            try {
+                DateTimeFormatter shortFmt = DateTimeFormatter.ofPattern("d-M-uu");
+                LocalDate ld = LocalDate.parse(normalized, shortFmt);
+                return ld.toString();
+            } catch (DateTimeParseException ignored) {}
+        }
+        return null;
+    }
+
+    private static String extractBank(String s) {
+        if (s == null) return null;
+        Matcher m = BANK_PATTERN.matcher(s);
+        if (!m.find()) return null;
+
+        String namePart = null;
+        try {
+            namePart = m.group(1);
+        } catch (Exception ignored) {}
+        if (namePart == null) return null;
+
+        namePart = namePart.trim();
+        namePart = namePart.replaceAll("(?i)^(in\\s+|to\\s+|your\\s+|our\\s+|my\\s+)", "").trim();
+        namePart = ACCOUNT_TOKEN_PATTERN.matcher(namePart).replaceAll("").trim();
+        namePart = namePart.replaceAll("[^A-Za-z0-9&.\\s\\-]", "").trim();
+        namePart = namePart.replaceAll("\\s{2,}", " ").trim();
+        if (namePart.isEmpty()) return null;
+
+        String lower = namePart.toLowerCase(Locale.ROOT);
+        for (Map.Entry<String, String> e : BANK_NORMALIZATION.entrySet()) {
+            if (lower.startsWith(e.getKey())) {
+                return e.getValue();
+            }
+        }
+
+        return capitalizeEachWord(namePart);
+    }
+
+    private static String capitalizeEachWord(String s) {
+        if (s == null || s.isEmpty()) return s;
+        String[] parts = s.toLowerCase(Locale.ROOT).split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String p : parts) {
+            if (p.length() == 0) continue;
+            sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1)).append(" ");
+        }
+        return sb.toString().trim();
+    }
+
+    private static String cleanBankNameFromMatcher(Matcher m) {
+        if (m == null) return null;
+        String namePart = "";
+        String typePart = "";
+        try {
+            namePart = m.group(1) != null ? m.group(1).trim() : "";
+        } catch (Exception ignored) {}
+        try {
+            typePart = m.groupCount() >= 2 && m.group(2) != null ? m.group(2).trim() : "";
+        } catch (Exception ignored) {}
+
+        if (namePart.isEmpty()) return null;
+
+        namePart = namePart.replaceAll("(?i)^(in\\s+|to\\s+|your\\s+|our\\s+|my\\s+|a\\s+|the\\s+)", "");
+        namePart = namePart.replaceAll("[^A-Za-z0-9&.\\s\\-]", "").trim();
+        namePart = namePart.replaceAll("\\s{2,}", " ");
+
+        String combined = namePart;
+        if (!typePart.isEmpty()) {
+            combined = combined + " " + typePart;
+        }
+
+        return combined.trim();
+    }
+
     private static PaymentDetails instantiatePaymentDetails() {
         try {
             return PaymentDetails.class.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
-            // If PaymentDetails isn't public/no-arg, we can't proceed safely
-            return null;
+            try {
+                Constructor<PaymentDetails> c = PaymentDetails.class.getDeclaredConstructor();
+                c.setAccessible(true);
+                return c.newInstance();
+            } catch (Exception ex) {
+                return null;
+            }
         }
     }
 
-    /**
-     * Try to set a property on the target object using:
-     * 1) setter method setXxxx(...)
-     * 2) direct field access if available
-     *
-     * This will handle common cases where PaymentDetails.amount is BigDecimal or String.
-     */
     private static void safeSet(Object target, String fieldName, Object value) {
         if (target == null || fieldName == null || value == null) return;
 
         Class<?> cls = target.getClass();
         String setterName = "set" + capitalize(fieldName);
 
-        // 1) Try setter with exact type, or with String/BigDecimal conversions
         try {
-            // attempt common setter signatures in order
             Method[] methods = cls.getMethods();
             for (Method m : methods) {
-                if (m.getName().equals(setterName) && m.getParameterCount() == 1) {
-                    Class<?> paramType = m.getParameterTypes()[0];
-                    Object toPass = convertValueIfNeeded(value, paramType);
-                    if (toPass != null) {
+                if (!m.getName().equalsIgnoreCase(setterName)) continue;
+                if (m.getParameterCount() != 1) continue;
+                Class<?> paramType = m.getParameterTypes()[0];
+                Object toPass = convertValueIfNeeded(value, paramType);
+                if (toPass != null) {
+                    try {
                         m.invoke(target, toPass);
                         return;
-                    }
+                    } catch (Exception ignore) { }
                 }
             }
-        } catch (Exception ignored) {
-            // fallthrough to direct field access
-        }
+        } catch (SecurityException ignored) {}
 
-        // 2) Try direct field access (including private)
         try {
             Field f = findFieldRecursive(cls, fieldName);
             if (f != null) {
@@ -153,56 +452,35 @@ public class SmsParser {
                     f.set(target, toPass);
                 }
             }
-        } catch (Exception ignored) {
-            // give up silently; parser remains tolerant
-        }
+        } catch (Exception ignored) {}
     }
 
-    // Convert value to targetType if reasonably possible. Return null if not convertible.
     private static Object convertValueIfNeeded(Object value, Class<?> targetType) {
         if (value == null) return null;
+        if (targetType.isAssignableFrom(value.getClass())) return value;
 
-        Class<?> src = value.getClass();
-
-        if (targetType.isAssignableFrom(src)) {
-            return value;
-        }
-
-        // if target is String, convert via toString
         if (targetType == String.class) {
             return value.toString();
         }
 
-        // if target is BigDecimal and source is String or BigDecimal
         if (targetType == BigDecimal.class) {
             if (value instanceof BigDecimal) return value;
-            if (value instanceof String) {
-                try {
-                    return new BigDecimal(((String) value).replace(",", ""));
-                } catch (Exception e) {
-                    return null;
-                }
-            }
+            String s = value.toString().replaceAll("[,]", "");
+            try { return new BigDecimal(s); } catch (Exception e) { return null; }
         }
 
-        // if target is primitive numeric types, try to convert from BigDecimal or String (rare for PaymentDetails)
         try {
-            if (Number.class.isAssignableFrom(targetType) || targetType.isPrimitive()) {
-                String s = value.toString().replace(",", "");
-                if (targetType == Integer.class || targetType == int.class) return Integer.parseInt(s);
-                if (targetType == Long.class || targetType == long.class) return Long.parseLong(s);
-                if (targetType == Double.class || targetType == double.class) return Double.parseDouble(s);
-                if (targetType == Float.class || targetType == float.class) return Float.parseFloat(s);
-                if (targetType == Short.class || targetType == short.class) return Short.parseShort(s);
-            }
-        } catch (Exception ignored) {
-        }
+            String s = value.toString().replaceAll("[,]", "");
+            if (targetType == Integer.class || targetType == int.class) return Integer.parseInt(s);
+            if (targetType == Long.class || targetType == long.class) return Long.parseLong(s);
+            if (targetType == Double.class || targetType == double.class) return Double.parseDouble(s);
+            if (targetType == Float.class || targetType == float.class) return Float.parseFloat(s);
+            if (targetType == Short.class || targetType == short.class) return Short.parseShort(s);
+        } catch (Exception ignored) {}
 
-        // otherwise unsupported conversion
         return null;
     }
 
-    // Find field in class or its superclasses
     private static Field findFieldRecursive(Class<?> cls, String name) {
         Class<?> c = cls;
         while (c != null) {
@@ -218,44 +496,5 @@ public class SmsParser {
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
-    }
-
-    // Helper to parse string amount like "1,234.50" into BigDecimal
-    private static BigDecimal parseAmountToBigDecimal(String raw) {
-        if (raw == null) return null;
-        String cleaned = raw.replace(",", "");
-        try {
-            return new BigDecimal(cleaned);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    // Try multiple patterns and heuristics to fetch sender name
-    private static String extractSenderName(String s) {
-        // Only look for patterns that explicitly indicate a received payment
-        List<Pattern> candidates = new ArrayList<>();
-        candidates.add(RECEIVED_FROM_PATTERN);
-        candidates.add(CREDITED_TO_PATTERN);
-
-        for (Pattern p : candidates) {
-            Matcher m = p.matcher(s);
-            if (m.find()) {
-                String name = m.group(1).trim();
-                // trim trailing keywords
-                name = name.replaceAll("(?:on\\s.*|via\\s.*|with\\s.*)$", "").trim();
-                // avoid returning something that looks like an account number or pure digits
-                if (name.matches("^\\d+$")) {
-                    continue;
-                }
-                // avoid returning a pure VPA
-                if (VPA_PATTERN.matcher(name).find()) {
-                    continue;
-                }
-                return name;
-            }
-        }
-
-        return null;
     }
 }

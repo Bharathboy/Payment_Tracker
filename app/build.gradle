@@ -1,3 +1,4 @@
+// Owned by @bharath_boy on telegram
 plugins {
     alias(libs.plugins.android.application)
 }

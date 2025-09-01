@@ -1,4 +1,7 @@
+// Owned by @bharath_boy on telegram
 package com.example.paymenttracker;
+
+// Owned by @bharath_boy on telegram
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -26,6 +29,7 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -60,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private MessageAdapter messageAdapter;
     private RecyclerView recyclerViewMessages;
     private TextView statusTextView;
+    private TextView emptyStateTextView;
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -84,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(this, "All required permissions were not granted. App may not function correctly.", Toast.LENGTH_LONG).show();
                     statusTextView.setText("Permissions required");
+                    updateStatusIconColor();
                 }
             });
 
@@ -104,17 +110,24 @@ public class MainActivity extends AppCompatActivity {
         ImageButton settingsButton = findViewById(R.id.settingsButton);
         ImageButton menuButton = findViewById(R.id.menuButton);
         statusTextView = findViewById(R.id.statusTextView);
+        ImageView statusInfoIcon = findViewById(R.id.statusInfoIcon);
+        statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
+        emptyStateTextView = findViewById(R.id.emptyStateText);
 
         loadMessagesFromPrefs();
         messageAdapter = new MessageAdapter(messagesList);
         recyclerViewMessages.setAdapter(messageAdapter);
 
+        updateStatusIconColor();
         checkAndRequestPermissions();
+
+
 
         settingsButton.setOnClickListener(v -> showSettingsDialog());
         menuButton.setOnClickListener(v -> showMenuDialog());
+        statusInfoIcon.setOnClickListener(v -> showDetailedStatusDialog());
 
         // The telegramSettingsButton is no longer in the layout, so we don't need to find it here.
     }
@@ -175,7 +188,11 @@ public class MainActivity extends AppCompatActivity {
             saveSettingsFromDialog(TELEGRAM_BOT_TOKEN, botToken);
             saveSettingsFromDialog(TELEGRAM_CHAT_ID, chatId);
 
+
+            Toast.makeText(MainActivity.this, "Settings saved!", Toast.LENGTH_SHORT).show();
+
             statusTextView.setText("Settings saved");
+            updateStatusIconColor();
             checkAndRequestPermissions();
             dialog.dismiss();
         });
@@ -201,6 +218,84 @@ public class MainActivity extends AppCompatActivity {
         });
 
         dialog.show();
+    }
+
+    private void showDetailedStatusDialog() {
+        // Read current settings and permissions
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "").trim();
+        String telegramBotToken = sharedPreferences.getString(TELEGRAM_BOT_TOKEN, "").trim();
+        String telegramChatId = sharedPreferences.getString(TELEGRAM_CHAT_ID, "").trim();
+
+        boolean isWebhookConfigured = !webhookUrl.isEmpty();
+        boolean isTelegramConfigured = !telegramBotToken.isEmpty() && !telegramChatId.isEmpty();
+        boolean isPermissionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
+        boolean isNotificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+
+        String title = "Detailed App Status";
+        StringBuilder messageBuilder = new StringBuilder();
+
+        // Status of permissions
+        messageBuilder.append("<b>Permissions:</b><br>");
+        if (isPermissionGranted && isNotificationPermissionGranted) {
+            messageBuilder.append("- All required permissions granted.<br>");
+        } else {
+            messageBuilder.append("- Permissions are missing. Please grant them in app settings.<br>");
+        }
+
+        // Status of forwarding settings
+        messageBuilder.append("<br><b>Forwarding Settings:</b><br>");
+        if (isWebhookConfigured) {
+            messageBuilder.append("- Webhook is ON.<br>");
+        } else {
+            messageBuilder.append("- Webhook is OFF. URL not configured.<br>");
+        }
+
+        if (isTelegramConfigured) {
+            messageBuilder.append("- Telegram is ON.<br>");
+        } else {
+            messageBuilder.append("- Telegram is OFF. Bot token or Chat ID not configured.<br>");
+        }
+
+        if (!isWebhookConfigured && !isTelegramConfigured) {
+            messageBuilder.append("<br>No forwarding endpoints are configured. Messages will be logged locally but not forwarded.");
+        }
+
+        // Display the detailed status in a dialog
+        AlertDialog dialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
+                .setTitle(title)
+                .setMessage(Html.fromHtml(messageBuilder.toString(), Html.FROM_HTML_MODE_LEGACY))
+                .setPositiveButton("OK", (dialogInterface, which) -> dialogInterface.dismiss())
+                .show();
+
+        // Set button color
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.button_normal));
+        }
+    }
+
+    private void updateStatusIconColor() {
+        ImageView statusInfoIcon = findViewById(R.id.statusInfoIcon);
+        String status = statusTextView.getText().toString();
+        int colorRes;
+
+        switch (status) {
+            case "Service running":
+                colorRes = R.color.text_accent;
+                break;
+            case "Settings saved":
+                colorRes = R.color.status_green;
+                break;
+            case "Permissions required":
+                colorRes = R.color.text_pink;
+                break;
+            default:
+                colorRes = R.color.text_secondary;
+                break;
+        }
+        statusInfoIcon.setColorFilter(ContextCompat.getColor(this, colorRes));
     }
 
     private void showMenuDialog() {
@@ -277,7 +372,6 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(key, value);
         editor.apply();
-        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
     }
 
     private void loadSettingsForDialog(EditText editText, String key) {
@@ -433,10 +527,19 @@ public class MainActivity extends AppCompatActivity {
 
         messagesList.clear();
         messagesList.addAll(loadedMessages);
+
+        // This is the new logic to show/hide the placeholder
+        if (messagesList.isEmpty()) {
+            recyclerViewMessages.setVisibility(View.GONE);
+            emptyStateTextView.setVisibility(View.VISIBLE);
+        } else {
+            recyclerViewMessages.setVisibility(View.VISIBLE);
+            emptyStateTextView.setVisibility(View.GONE);
+        }
+
         if (messageAdapter != null) messageAdapter.notifyDataSetChanged();
         Log.d("MainActivity", "Loaded " + messagesList.size() + " messages from prefs and sorted them.");
     }
-
     public void checkAndRequestPermissions() {
         List<String> permissionsToRequest = new ArrayList<>();
 
@@ -453,6 +556,7 @@ public class MainActivity extends AppCompatActivity {
             requestPermissionsLauncher.launch(permissionsToRequest.toArray(new String[0]));
         } else {
             startForwardingService();
+            updateStatusIconColor();
             checkBatteryOptimization();
         }
     }
@@ -501,6 +605,7 @@ public class MainActivity extends AppCompatActivity {
         Intent serviceIntent = new Intent(this, SmsForwardingService.class);
         startForegroundService(serviceIntent);
         statusTextView.setText("Service running");
+        updateStatusIconColor();
         Log.d("MainActivity", "Foreground service started successfully.");
     }
 

@@ -52,54 +52,112 @@ public class SmsForwardingService extends Service {
         Log.d(TAG, "onStartCommand called.");
         showForegroundNotification();
 
-        if (intent != null && intent.getExtras() != null) {
-            Log.d(TAG, "Intent received. Processing SMS messages.");
-            for (SmsMessage smsMessage : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
-                String messageBody = smsMessage.getMessageBody();
-                String originatingAddress = smsMessage.getOriginatingAddress();
-                long timestampMillis = smsMessage.getTimestampMillis();
-                String dateString = String.valueOf(timestampMillis);
+        if (intent == null || intent.getExtras() == null) {
+            Log.d(TAG, "No intent or extras; nothing to do.");
+            return START_STICKY;
+        }
 
-                if (messageBody == null || originatingAddress == null) {
-                    Log.w(TAG, "Received SMS with null body or sender. Skipping...");
-                    continue;
-                }
+        Log.d(TAG, "Intent received. Processing SMS messages.");
 
-                PaymentDetails details = SmsParser.parse(messageBody);
-                Message newMessage;
+        SmsMessage[] messages = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+        if (messages == null || messages.length == 0) {
+            Log.w(TAG, "No SMS messages found in intent.");
+            return START_STICKY;
+        }
 
-                SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
-                String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
-                String telegramBotToken = sharedPreferences.getString(MainActivity.TELEGRAM_BOT_TOKEN, "");
-                String telegramChatId = sharedPreferences.getString(MainActivity.TELEGRAM_CHAT_ID, "");
-                String secretKey = sharedPreferences.getString(MainActivity.SECRET_KEY, "");
+        // Reassemble multipart SMS into one full message
+        StringBuilder sb = new StringBuilder();
+        String originatingAddress = null;
+        long timestampMillis = 0L;
 
-                if (details != null) {
-                    if ((webhookUrl == null || webhookUrl.isEmpty()) &&
-                            (telegramBotToken == null || telegramBotToken.isEmpty() || telegramChatId == null || telegramChatId.isEmpty())) {
-                        Log.d(TAG, "Parsed payment SMS but no forwarding options set.");
-                        newMessage = new Message(originatingAddress, messageBody, "NO_FORWARDER_SET", dateString);
-                    } else {
-                        Log.d(TAG, "Successfully parsed payment SMS.");
+        for (SmsMessage smsMessage : messages) {
+            if (smsMessage == null) continue;
 
-                        if (webhookUrl != null && !webhookUrl.isEmpty()) {
-                            sendWebhook(details, messageBody, webhookUrl, secretKey);
-                        }
-
-                        if (telegramBotToken != null && !telegramBotToken.isEmpty() && telegramChatId != null && !telegramChatId.isEmpty()) {
-                            sendTelegramMessage(details, messageBody, telegramBotToken, telegramChatId);
-                        }
-
-                        newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
-                    }
-                } else {
-                    Log.d(TAG, "SMS ignored (not a payment message): " + messageBody);
-                    newMessage = new Message(originatingAddress, messageBody, "IGNORED", dateString);
-                }
-
-                saveMessageToPrefs(newMessage);
-                broadcastNewMessage(newMessage);
+            if (originatingAddress == null) {
+                originatingAddress = smsMessage.getOriginatingAddress();
             }
+
+            String part = smsMessage.getMessageBody();
+            if (part != null) {
+                sb.append(part);
+            }
+
+            if (timestampMillis == 0L) {
+                timestampMillis = smsMessage.getTimestampMillis();
+            }
+        }
+
+        String fullMessage = sb.toString();
+        String dateString = String.valueOf(timestampMillis);
+
+        if (fullMessage == null || fullMessage.isEmpty() || originatingAddress == null) {
+            Log.w(TAG, "Received SMS with null/empty body or sender. Skipping...");
+            return START_STICKY;
+        }
+
+        // Load forwarding / config settings once
+        SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(MainActivity.WEBHOOK_URL, "");
+        String telegramBotToken = sharedPreferences.getString(MainActivity.TELEGRAM_BOT_TOKEN, "");
+        String telegramChatId = sharedPreferences.getString(MainActivity.TELEGRAM_CHAT_ID, "");
+        String secretKey = sharedPreferences.getString(MainActivity.SECRET_KEY, "");
+
+        // Parse the full message (do this once)
+        PaymentDetails details = null;
+        try {
+            details = SmsParser.parse(fullMessage);
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing SMS: " + e.getMessage(), e);
+        }
+
+        Message newMessage;
+        if (details != null) {
+            boolean hasWebhook = webhookUrl != null && !webhookUrl.isEmpty();
+            boolean hasTelegram = telegramBotToken != null && !telegramBotToken.isEmpty() &&
+                    telegramChatId != null && !telegramChatId.isEmpty();
+
+            if (!hasWebhook && !hasTelegram) {
+                Log.d(TAG, "Parsed payment SMS but no forwarding options set.");
+                newMessage = new Message(originatingAddress, fullMessage, "SET FORWARDER!", dateString);
+            } else {
+                Log.d(TAG, "Successfully parsed payment SMS.");
+
+                // Attempt to send webhook (don't let one failure stop processing)
+                if (hasWebhook) {
+                    try {
+                        sendWebhook(details, fullMessage, webhookUrl, secretKey);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to send webhook: " + e.getMessage(), e);
+                    }
+                }
+
+                // Attempt to send Telegram message
+                if (hasTelegram) {
+                    try {
+                        sendTelegramMessage(details, fullMessage, telegramBotToken, telegramChatId);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to send Telegram message: " + e.getMessage(), e);
+                    }
+                }
+
+                newMessage = new Message(originatingAddress, fullMessage, "SUBMITTED", dateString);
+            }
+        } else {
+            Log.d(TAG, "SMS ignored (not a payment message): " + fullMessage);
+            newMessage = new Message(originatingAddress, fullMessage, "IGNORED", dateString);
+        }
+
+        // Save & broadcast once
+        try {
+            saveMessageToPrefs(newMessage);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to save message to prefs: " + e.getMessage(), e);
+        }
+
+        try {
+            broadcastNewMessage(newMessage);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to broadcast new message: " + e.getMessage(), e);
         }
 
         return START_STICKY;
@@ -179,8 +237,12 @@ public class SmsForwardingService extends Service {
                 Log.e(TAG, "Webhook failed to send", e);
             }
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                showToast(response.isSuccessful() ? "Webhook sent successfully" : "Webhook failed");
-                Log.d(TAG, "Webhook response code: " + response.code());
+                if (!response.isSuccessful()) {
+                    showToast("Webhook failed: " + response.code());
+                    Log.e(TAG, "Webhook failed with code: " + response.code());
+                } else {
+                    Log.d(TAG, "Webhook sent successfully. Response code: " + response.code());
+                }
                 response.close();
             }
         });
@@ -232,13 +294,12 @@ public class SmsForwardingService extends Service {
                 Log.e(TAG, "Failed to send message to Telegram", e);
             }
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    showToast("Message sent to Telegram");
-                    Log.d(TAG, "Telegram response code: " + response.code());
-                } else {
+                if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "empty";
                     showToast("Telegram send failed");
                     Log.e(TAG, "Error: " + response.code() + ", Body: " + errorBody);
+                } else {
+                    Log.d(TAG, "Message sent to Telegram successfully. Response code: " + response.code());
                 }
                 response.close();
             }
