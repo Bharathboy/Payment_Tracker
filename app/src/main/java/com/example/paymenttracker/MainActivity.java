@@ -107,11 +107,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if ("com.example.paymenttracker.NEW_MESSAGE".equals(intent.getAction())) {
+                    Log.d("MainActivity", "Broadcast received in MainActivity");
                     Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
                     if (newMessage != null) {
-                        messagesList.add(0, newMessage); // Add to top
-                        messageAdapter.notifyItemInserted(0);
-                        recyclerViewMessages.scrollToPosition(0);
+                        runOnUiThread(() -> {
+                            messagesList.add(0, newMessage); // Add to top
+                            messageAdapter.notifyItemInserted(0);
+                            recyclerViewMessages.scrollToPosition(0);
+                        });
+                        Log.d("MainActivity", "New message added: " + newMessage.content);
+                    } else {
+                        Log.d("MainActivity", "Received message is null!");
                     }
                 }
             }
