@@ -7,7 +7,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.chip.Chip;
-import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.card.MaterialCardView; // Import MaterialCardView
 import java.util.List;
 
 public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageViewHolder> {
@@ -30,7 +30,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         Message msg = messages.get(position);
         holder.tvSender.setText(msg.sender);
         holder.tvMessage.setText(msg.content);
-        holder.tvDate.setText(msg.getFormattedTimestamp()); // CORRECTED LINE
+        holder.tvDate.setText(msg.getFormattedTimestamp());
         holder.chipStatus.setText(msg.status);
         // Set chip color based on status
         int colorRes;
@@ -55,14 +55,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         TextView tvSender, tvMessage, tvDate;
         Chip chipStatus;
-        MaterialCardView cardView;
+        MaterialCardView cardView; // Corrected type
         public MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             tvSender = itemView.findViewById(R.id.tvSender);
             tvMessage = itemView.findViewById(R.id.tvMessage);
             tvDate = itemView.findViewById(R.id.tvDate);
             chipStatus = itemView.findViewById(R.id.chipStatus);
-            cardView = (MaterialCardView) itemView;
+            cardView = (MaterialCardView) itemView; // Corrected cast
         }
     }
 }

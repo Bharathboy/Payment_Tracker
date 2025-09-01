@@ -1,16 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/bg_panel"
     android:orientation="vertical"
     android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_horizontal"
+        android:text="Webhook Settings"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/dialogWebhookUrlEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/text_secondary"
         android:hint="@string/webhook_url_hint"
         android:inputType="textUri"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
         android:autofillHints="url" />
 
     <EditText
@@ -18,41 +33,51 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:backgroundTint="@color/text_secondary"
         android:hint="@string/secret_key_hint"
         android:inputType="textPassword"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
         android:autofillHints="password" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="24dp">
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/dialogSaveButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/save_button_text" />
+            android:backgroundTint="@color/bg_blue"
+            android:text="@string/save_button_text"
+            android:textColor="@color/white"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/dialogTestButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/test_webhook_button" />
+            android:backgroundTint="@color/bg_panel_strong"
+            android:text="@string/test_webhook_button"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
     <Button
         android:id="@+id/dialogCancelButton"
-        style="?android:attr/buttonBarButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/cancel_button_text" />
+        android:text="@string/cancel_button_text"
+        android:textColor="@color/text_secondary"
+        android:textStyle="bold"
+        android:backgroundTint="@android:color/transparent"
+        style="@style/Widget.Material3.Button.TextButton" />
 
 </LinearLayout>

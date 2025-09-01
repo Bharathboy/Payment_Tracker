@@ -1,44 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Modern Messaging App Color Palette -->
-    <color name="black">#000000</color>
+    <color name="bg_dark_telegram">#1E252D</color>
+    <color name="bg_panel">#2D3841</color>
+    <color name="bg_panel_strong">#36424D</color>
+    <color name="bg_blue">#4C95E1</color>
+    <color name="text_primary">#EFEFEF</color>
+    <color name="text_secondary">#9DA5AD</color>
+    <color name="text_accent">#4C95E1</color>
+    <color name="text_pink">#DA7A7A</color>
+    <color name="border_primary_light">#36424D</color>
     <color name="white">#FFFFFF</color>
-    <color name="accent_color">#0088CC</color>
-    <!-- Background Colors -->
-    <color name="bg_primary">#1E1E2D</color> <!-- rgb(30,30,45) -->
-    <color name="bg_accent_translucent">#A445B2</color> <!-- rgb(164,69,178) fallback for translucent -->
-    <color name="bg_secondary">#191928</color> <!-- rgb(25,25,40) -->
-    <color name="bg_white_translucent">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
-    <color name="bg_black_translucent">#000000</color> <!-- rgb(0,0,0) fallback for translucent -->
-    <color name="bg_deep">#1A1A2E</color> <!-- rgb(26,26,46) -->
-    <color name="bg_blue">#0088CC</color> <!-- rgb(0,136,204) -->
-    <color name="bg_black_strong">#000000</color> <!-- rgb(0,0,0) fallback for translucent -->
-    <color name="bg_dark_overlay">#141423</color> <!-- rgb(20,20,35) fallback for translucent -->
-    <color name="bg_panel">#28283C</color> <!-- rgb(40,40,60) -->
-    <color name="bg_panel_strong">#1C1C28</color> <!-- rgb(28,28,40) -->
-    <color name="bg_panel_light">#28283C</color> <!-- rgb(40,40,60) fallback for translucent -->
-    <!-- Text Colors -->
-    <color name="text_black">#000000</color>
-    <color name="text_white">#FFFFFF</color>
-    <color name="text_primary">#E0E0FF</color> <!-- rgb(224,224,255) -->
-    <color name="text_primary_translucent">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
-    <color name="text_primary_light">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
-    <color name="text_secondary">#AAAAAA</color>
-    <color name="text_accent">#E0AAFF</color> <!-- rgb(224,170,255) -->
-    <color name="text_pink">#FA4299</color> <!-- rgb(250,66,153) -->
-    <color name="text_grey">#AAAAAA</color> <!-- rgb(170,170,170) -->
-    <color name="text_grey_light">#DDDDDD</color> <!-- rgb(221,221,221) -->
-    <!-- Border Colors -->
-    <color name="border_black">#000000</color>
-    <color name="border_white">#FFFFFF</color>
-    <color name="border_white_translucent">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
-    <color name="border_accent">#E0AAFF</color> <!-- rgb(224,170,255) -->
-    <color name="border_accent_translucent">#A445B2</color> <!-- rgb(164,69,178) fallback for translucent -->
-    <color name="border_pink">#FA4299</color>
-    <color name="border_purple">#A445B2</color>
-    <color name="border_grey">#AAAAAA</color>
-    <color name="border_grey_light">#DDDDDD</color>
-    <color name="border_primary_translucent">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
-    <color name="border_white_light">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
-    <color name="border_primary_light">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
+    <color name="status_green">#4CAF50</color>
 </resources>

@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private MessageAdapter messageAdapter;
     private RecyclerView recyclerViewMessages;
     private TextView statusTextView;
-    private Button settingsButton;
+    private ImageButton settingsButton; // CORRECTED LINE
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -81,12 +82,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
 
-        // Load messages from SharedPreferences on app launch
         loadMessagesFromPrefs();
         messageAdapter = new MessageAdapter(messagesList);
         recyclerViewMessages.setAdapter(messageAdapter);
 
-        // Check for SMS permissions and start the service
         checkAndRequestSmsPermission();
 
         settingsButton.setOnClickListener(v -> {
@@ -134,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Call this to update the list when the app comes back to the foreground
         loadMessagesFromPrefs();
         if (!isReceiverRegistered) {
             IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");

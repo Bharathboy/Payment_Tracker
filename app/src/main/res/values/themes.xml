@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-        Base application theme. This applies the new dark colors
-        and removes the default top action bar for a cleaner look.
-    -->
     <style name="Theme.PaymentTracker" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
-    <item name="colorPrimary">@color/bg_blue</item>
-    <item name="colorSecondary">@color/text_accent</item>
-    <item name="colorSurface">@color/bg_panel</item>
-    <item name="colorOnSurface">@color/text_primary</item>
-    <item name="android:statusBarColor">@color/bg_deep</item>
-    <item name="android:windowBackground">@color/bg_primary</item>
-    <item name="android:fontFamily">@font/roboto</item>
-    <item name="fontFamily">@font/roboto</item>
-    <item name="android:textColor">@color/text_primary</item>
-    <item name="android:textColorHint">@color/text_grey</item>
-    <item name="colorOutline">@color/border_primary_light</item>
+        <item name="colorPrimary">@color/bg_blue</item>
+        <item name="colorSecondary">@color/text_accent</item>
+        <item name="colorSurface">@color/bg_panel</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:statusBarColor">@color/bg_dark_telegram</item>
+        <item name="android:windowBackground">@color/bg_dark_telegram</item>
+        <item name="android:fontFamily">@font/roboto</item>
+        <item name="fontFamily">@font/roboto</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="colorOutline">@color/border_primary_light</item>
     </style>
 </resources>
