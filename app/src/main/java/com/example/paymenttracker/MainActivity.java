@@ -217,9 +217,6 @@ public class MainActivity extends AppCompatActivity {
         messages.add(new Message(
             "JX-KOTAKB-S",
             "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
-                Log.d("MainActivity", "[GLOBAL] onReceive called. Intent: " + intent);
-                String testMsg = intent.getStringExtra("test_message");
-                Log.d("MainActivity", "[GLOBAL] test_message extra: " + testMsg);
             "SUBMITTED",
             "Aug 31, 2025 19:31"
         ));
