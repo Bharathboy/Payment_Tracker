@@ -47,6 +47,14 @@ import androidx.core.content.ContextCompat;
 
 
 public class MainActivity extends AppCompatActivity {
+    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(WEBHOOK_URL, webhookUrl);
+        editor.putString(SECRET_KEY, secretKey);
+        editor.apply();
+        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
+    }
     private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
