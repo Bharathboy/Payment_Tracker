@@ -7,5 +7,4 @@
         android:color="#80FFFFFF" />
     <corners android:radius="32dp" />
     <padding android:left="6dp" android:top="6dp" android:right="6dp" android:bottom="6dp" />
-    <shadow android:color="#22000000" android:radius="8" />
- </shape>
+</shape>
