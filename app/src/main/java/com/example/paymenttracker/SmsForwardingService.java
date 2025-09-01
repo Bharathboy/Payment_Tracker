@@ -1,4 +1,3 @@
-// PASTE THIS ENTIRE BLOCK INTO THE NEW SmsForwardingService.java
 package com.example.paymenttracker;
 
 import android.app.Notification;
@@ -7,16 +6,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
-import android.content.Intent; // Ensure this import is present
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
-// android.os.Message import removed
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
 
-import androidx.annotation.NonNull; // Added NonNull import
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
@@ -24,6 +21,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -53,7 +52,7 @@ public class SmsForwardingService extends Service {
 
         startForeground(1, notification);
 
-        if (intent != null && Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) {
+        if (intent != null && intent.getExtras() != null) {
             for (SmsMessage smsMessage : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
                 String messageBody = smsMessage.getMessageBody();
                 String originatingAddress = smsMessage.getOriginatingAddress();
@@ -65,29 +64,29 @@ public class SmsForwardingService extends Service {
                     sendWebhook(this, details, messageBody);
 
                     String dateString = String.valueOf(timestampMillis);
-                    com.example.paymenttracker.Message newMessage = new com.example.paymenttracker.Message(originatingAddress, messageBody, "Received", dateString);
+                    Message newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
+
+                    saveMessageToPrefs(newMessage);
 
                     Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
                     broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
-                    // Send both LocalBroadcast and global broadcast for debugging
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
                     sendBroadcast(broadcastIntent);
-                    Log.d(TAG, "New message LocalBroadcasted and globally broadcasted to MainActivity from sender: " + originatingAddress);
+                    Log.d(TAG, "New message globally broadcasted to MainActivity from sender: " + originatingAddress);
                 } else {
                     Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
-                    /*
-                    String dateString = String.valueOf(timestampMillis);
-                    // Corrected to use your com.example.paymenttracker.Message class if you uncomment this
-                    com.example.paymenttracker.Message nonPaymentMessage = new com.example.paymenttracker.Message(originatingAddress, messageBody, "Ignored", dateString);
-                    Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
-                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", nonPaymentMessage);
-                    sendBroadcast(broadcastIntent);
-                    Log.d(TAG, "Non-payment SMS broadcasted to MainActivity from sender: " + originatingAddress);
-                    */
                 }
             }
         }
         return START_STICKY;
+    }
+
+    private void saveMessageToPrefs(Message message) {
+        SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
+        Set<String> messageSet = new HashSet<>(sharedPreferences.getStringSet(MainActivity.MESSAGES, new HashSet<>()));
+        messageSet.add(message.toString());
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putStringSet(MainActivity.MESSAGES, messageSet);
+        editor.apply();
     }
 
     private void sendWebhook(Context context, PaymentDetails details, String fullSms) {
@@ -124,11 +123,11 @@ public class SmsForwardingService extends Service {
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) { // Added @NonNull
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 Log.e(TAG, "Webhook failed to send", e);
             }
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) { // Added @NonNull
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 Log.d(TAG, "Webhook sent. Response code: " + response.code());
                 response.close();
             }
@@ -153,4 +152,3 @@ public class SmsForwardingService extends Service {
         return null;
     }
 }
-
