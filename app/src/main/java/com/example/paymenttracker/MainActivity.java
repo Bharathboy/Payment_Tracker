@@ -199,40 +199,6 @@ public class MainActivity extends AppCompatActivity {
             }
             isReceiverRegistered = false;
         }
-    }
-
-    // REMOVED ViewTreeObserver block for Blurry
-    // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-    //     @Override
-            newMessageReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    Log.d("MainActivity", "[LOCAL] onReceive called. Intent: " + intent);
-                    if ("com.example.paymenttracker.NEW_MESSAGE".equals(intent.getAction())) {
-                        Log.d("MainActivity", "[LOCAL] Broadcast received in MainActivity");
-                        String testMsg = intent.getStringExtra("test_message");
-                        Log.d("MainActivity", "[LOCAL] test_message extra: " + testMsg);
-                        Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
-                        if (newMessage != null) {
-                            runOnUiThread(() -> {
-                                messagesList.add(0, newMessage); // Add to top
-                                messageAdapter.notifyItemInserted(0);
-                                recyclerViewMessages.scrollToPosition(0);
-                            });
-                            Log.d("MainActivity", "[LOCAL] New message added: " + newMessage.content);
-                        } else {
-                            Log.d("MainActivity", "[LOCAL] Received message is null!");
-                        }
-                    }
-                }
-            };
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(WEBHOOK_URL, webhookUrl);
-        editor.putString(SECRET_KEY, secretKey);
-        editor.apply();
-        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
-    }
 
     private java.util.List<Message> getSampleMessages() {
         java.util.List<Message> messages = new java.util.ArrayList<>();
