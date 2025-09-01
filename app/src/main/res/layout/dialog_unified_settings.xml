@@ -143,7 +143,7 @@
                 android:layout_weight="1"
                 android:background="@drawable/button_dynamic_background"
                 android:text="@string/cancel_button_text"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/white"
                 android:textStyle="bold"
                 app:cornerRadius="28dp" />
 

@@ -2,21 +2,13 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <gradient
-                android:angle="90"
-                android:startColor="#3686D7"
-                android:endColor="#337ABF"
-                android:type="linear" />
+            <solid android:color="@color/bg_blue" />
             <corners android:radius="28dp" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <gradient
-                android:angle="90"
-                android:startColor="#4C95E1"
-                android:endColor="#4C95E1"
-                android:type="linear" />
+            <solid android:color="@color/text_accent" />
             <corners android:radius="28dp" />
         </shape>
     </item>
