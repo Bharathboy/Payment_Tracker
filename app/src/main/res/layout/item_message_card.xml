@@ -10,7 +10,8 @@
     app:cardElevation="4dp"
     app:strokeColor="@color/border_primary_light"
     app:strokeWidth="1dp"
-    android:backgroundTint="@color/bg_panel">
+    android:backgroundTint="@color/bg_panel"
+    android:animateLayoutChanges="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"

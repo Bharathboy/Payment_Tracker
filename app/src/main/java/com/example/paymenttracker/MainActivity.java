@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,11 +27,23 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
@@ -47,14 +61,14 @@ public class MainActivity extends AppCompatActivity {
         urlEditText.setText(webhookUrl);
         keyEditText.setText(secretKey);
     }
-
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver messageReceiver;
     private boolean isReceiverRegistered = false;
     private List<Message> messagesList = new ArrayList<>();
     private MessageAdapter messageAdapter;
     private RecyclerView recyclerViewMessages;
     private TextView statusTextView;
-    private ImageButton settingsButton; // CORRECTED LINE
+    private ImageButton settingsButton;
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -124,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                Toast.makeText(MainActivity.this, "Test button clicked (Not yet implemented)", Toast.LENGTH_SHORT).show();
+                testWebhook(webhookUrl, secretKey);
             });
             dialog.show();
         });
@@ -230,5 +244,48 @@ public class MainActivity extends AppCompatActivity {
         startForegroundService(serviceIntent);
         statusTextView.setText(getString(R.string.status_service_running));
         Log.d("MainActivity", "Foreground service started successfully.");
+    }
+
+    private void testWebhook(String webhookUrl, String secretKey) {
+        // Create a dummy payload for testing
+        JSONObject jsonPayload = new JSONObject();
+        try {
+            jsonPayload.put("amount_received", "1.00");
+            jsonPayload.put("upi_ref_id", "TEST1234567890");
+            jsonPayload.put("sender_name", "Test User");
+            jsonPayload.put("sender_vpa", "test@upi");
+            jsonPayload.put("full_sms_body", "This is a test message from your app.");
+        } catch (JSONException e) {
+            mainHandler.post(() -> Toast.makeText(MainActivity.this, "Error creating test payload", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        OkHttpClient client = new OkHttpClient();
+        MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(jsonPayload.toString(), JSON);
+
+        Request request = new Request.Builder()
+                .url(webhookUrl)
+                .post(body)
+                .addHeader("X-My-App-Signature", secretKey)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                Log.e("MainActivity", "Test webhook failed", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Successful! Response: " + response.code(), Toast.LENGTH_LONG).show());
+                } else {
+                    mainHandler.post(() -> Toast.makeText(MainActivity.this, "Test Webhook Failed with Code: " + response.code(), Toast.LENGTH_LONG).show());
+                }
+                response.close();
+            }
+        });
     }
 }
