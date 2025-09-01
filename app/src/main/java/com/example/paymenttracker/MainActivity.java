@@ -1,6 +1,7 @@
 package com.example.paymenttracker;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +17,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,6 +45,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -98,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         ImageButton settingsButton = findViewById(R.id.settingsButton);
+        ImageButton menuButton = findViewById(R.id.menuButton);
         statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
@@ -109,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         checkAndRequestPermissions();
 
         settingsButton.setOnClickListener(v -> showSettingsDialog());
+        menuButton.setOnClickListener(v -> showMenuDialog());
 
         // The telegramSettingsButton is no longer in the layout, so we don't need to find it here.
     }
@@ -197,6 +203,75 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void showMenuDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_menu, null);
+        builder.setView(dialogView);
+
+        // Get references to the TextViews
+        TextView aboutItem = dialogView.findViewById(R.id.aboutItem);
+        TextView contactItem = dialogView.findViewById(R.id.contactItem);
+        TextView termsItem = dialogView.findViewById(R.id.termsItem);
+        TextView privacyItem = dialogView.findViewById(R.id.privacyItem);
+
+        final AlertDialog menuDialog = builder.create();
+        Window window = menuDialog.getWindow();
+        if (window != null) window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        View.OnClickListener infoClickListener = v -> {
+            // Dismiss the menu dialog first
+            menuDialog.dismiss();
+
+            // Store your titles and messages in a Map for a cleaner lookup
+            Map<Integer, String[]> infoMap = new HashMap<>();
+            infoMap.put(R.id.aboutItem, new String[]{"About", "This app helps you track your payments by forwarding incoming SMS messages to your personal webhook or Telegram account."});
+            infoMap.put(R.id.contactItem, new String[]{"Contact", "You can contact the developer <a href=\"https://t.me/bharath_boy\">Bharath</a> for support or feedback."});
+            infoMap.put(R.id.termsItem, new String[]{"Terms and Conditions", "All data is processed locally on your device.<br><br><b>Disclaimer:</b> The developer is not responsible for any misuse of the app."});
+            infoMap.put(R.id.privacyItem, new String[]{"Privacy Policy", "This app does not collect any personal data.<br><br>All information is stored securely on your device and sent directly to your configured endpoints."});
+
+            // Retrieve the title and message from the Map based on the clicked item's ID
+            String[] info = infoMap.get(v.getId());
+            if (info != null) {
+                String title = info[0];
+                String message = info[1];
+                showInfoDialog(title, message);
+            }
+        };
+
+        aboutItem.setOnClickListener(infoClickListener);
+        contactItem.setOnClickListener(infoClickListener);
+        termsItem.setOnClickListener(infoClickListener);
+        privacyItem.setOnClickListener(infoClickListener);
+
+        menuDialog.show();
+    }
+
+    private void showInfoDialog(String title, String message) {
+        // Inflate a custom title layout
+        LayoutInflater inflater = getLayoutInflater();
+        View customTitleView = inflater.inflate(R.layout.dialog_custom_title, null);
+        TextView titleTextView = customTitleView.findViewById(R.id.customTitleTextView);
+        titleTextView.setText(Html.fromHtml("<b>" + title + "</b>", Html.FROM_HTML_MODE_LEGACY));
+
+        AlertDialog dialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
+                .setCustomTitle(customTitleView)
+                .setMessage(Html.fromHtml(message, Html.FROM_HTML_MODE_LEGACY))
+                .setPositiveButton("OK", (dialogInterface, which) -> dialogInterface.dismiss())
+                .show();
+
+        // Get the message TextView from the dialog and make links clickable
+        TextView messageTextView = dialog.findViewById(android.R.id.message);
+        if (messageTextView != null) {
+            messageTextView.setMovementMethod(LinkMovementMethod.getInstance());
+        }
+
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.button_normal));
+        }
+    }
+
     private void saveSettingsFromDialog(String key, String value) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -211,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
         editText.setText(value);
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onResume() {
         super.onResume();
