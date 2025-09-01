@@ -22,6 +22,7 @@
     <color name="text_primary">#E0E0FF</color> <!-- rgb(224,224,255) -->
     <color name="text_primary_translucent">#E0E0FFCC</color> <!-- rgba(224,224,255,0.8) -->
     <color name="text_primary_light">#E0E0FFB3</color> <!-- rgba(224,224,255,0.7) -->
+    <color name="text_secondary">#AAAAAA</color>
     <color name="text_accent">#E0AAFF</color> <!-- rgb(224,170,255) -->
     <color name="text_pink">#FA4299</color> <!-- rgb(250,66,153) -->
     <color name="text_grey">#AAAAAA</color> <!-- rgb(170,170,170) -->
