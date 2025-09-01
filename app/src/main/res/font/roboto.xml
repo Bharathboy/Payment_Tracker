@@ -3,13 +3,13 @@
     <font
         android:fontStyle="normal"
         android:fontWeight="400"
-        android:font="@font/roboto_regular.ttf" />
+    android:font="@font/roboto_regular" />
     <font
         android:fontStyle="italic"
         android:fontWeight="400"
-        android:font="@font/roboto_italic.ttf" />
+    android:font="@font/roboto_italic" />
     <font
         android:fontStyle="normal"
         android:fontWeight="700"
-        android:font="@font/roboto_bold.ttf" />
+    android:font="@font/roboto_bold" />
 </font-family>
