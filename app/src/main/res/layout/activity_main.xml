@@ -32,17 +32,29 @@
             app:layout_constraintWidth_default="spread"
             app:layout_constraintHeight_default="wrap" />
 
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:backgroundTint="@color/bg_primary"
+            app:title="Payment Tracker"
+            app:titleTextColor="@color/text_primary"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <TextView
             android:id="@+id/titleTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Webhook Settings"
-            android:textColor="@color/white"
-            android:textSize="30sp"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:fontFamily="sans-serif-medium"
-            android:gravity="center"
-            app:layout_constraintTop_toTopOf="parent"
+            android:gravity="start"
+            android:layout_marginTop="12dp"
+            app:layout_constraintTop_toBottomOf="@id/topAppBar"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -52,10 +64,10 @@
             android:layout_height="wrap_content"
             android:text="Connect to your Telegram Bot"
             android:textColor="@color/text_secondary"
-            android:textSize="17sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif"
-            android:gravity="center"
-            android:layout_marginTop="10dp"
+            android:gravity="start"
+            android:layout_marginTop="6dp"
             app:layout_constraintTop_toBottomOf="@id/titleTextView"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
@@ -146,11 +158,23 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/border_white_light"
+            app:layout_constraintTop_toBottomOf="@id/glass_panel"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <LinearLayout
             android:id="@+id/buttons_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center"
             app:layout_constraintTop_toBottomOf="@id/glass_panel"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -160,7 +184,8 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_marginEnd="10dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
                 android:text="Test"
                 android:textAllCaps="false"
                 android:textSize="16sp"
@@ -170,11 +195,10 @@
                 app:strokeColor="@color/bg_blue"
                 app:strokeWidth="2dp"
                 app:iconTint="@color/bg_blue"
+                app:icon="@android:drawable/ic_menu_send"
+                app:iconPadding="12dp"
                 app:rippleColor="@color/text_accent"
                 android:textColor="@color/text_primary"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/saveButton"
-                app:layout_constraintWidth_percent="0.35"
                 android:stateListAnimator="@anim/button_press" />
 
             <com.google.android.material.button.MaterialButton
@@ -182,7 +206,8 @@
                 style="@style/Widget.Material3.Button"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_marginStart="10dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="2"
                 android:backgroundTint="@color/bg_blue"
                 android:contentDescription="Save configuration and start service"
                 android:enabled="true"
@@ -195,12 +220,10 @@
                 app:cornerRadius="16dp"
                 app:iconTint="@color/text_primary"
                 app:rippleColor="@color/text_accent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/testButton"
-                app:layout_constraintWidth_percent="0.65"
-                tools:layout_editor_absoluteY="0dp" />
+                app:icon="@android:drawable/ic_menu_save"
+                app:iconPadding="12dp" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/statusTextView"
