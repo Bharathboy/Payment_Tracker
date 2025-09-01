@@ -36,9 +36,8 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -99,6 +98,10 @@ public class MainActivity extends AppCompatActivity {
         statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
+
+        // This line was causing the crash, it will be removed in the next step
+        // SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        // sharedPreferences.edit().remove(MESSAGES).apply();
 
         loadMessagesFromPrefs();
         messageAdapter = new MessageAdapter(messagesList);
@@ -199,12 +202,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadMessagesFromPrefs() {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        Set<String> messageSet = sharedPreferences.getStringSet(MESSAGES, new HashSet<>());
+        String messagesString = sharedPreferences.getString(MESSAGES, "");
         List<Message> loadedMessages = new ArrayList<>();
-        for (String messageString : messageSet) {
-            loadedMessages.add(Message.fromString(messageString));
+        if (!messagesString.isEmpty()) {
+            String[] messageStrings = messagesString.split("\\|\\|\\|");
+            for (String messageString : messageStrings) {
+                loadedMessages.add(Message.fromString(messageString));
+            }
         }
-        Collections.reverse(loadedMessages);
+
+        Collections.sort(loadedMessages, new Comparator<Message>() {
+            @Override
+            public int compare(Message m1, Message m2) {
+                try {
+                    long t1 = Long.parseLong(m1.timestamp);
+                    long t2 = Long.parseLong(m2.timestamp);
+                    return Long.compare(t2, t1);
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        });
+
         messagesList.clear();
         messagesList.addAll(loadedMessages);
         if (messageAdapter != null) {
