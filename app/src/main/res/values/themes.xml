@@ -7,9 +7,14 @@
     <style name="Theme.PaymentTracker" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/accent_color</item>
-        <!-- Status bar color. -->
+        <item name="colorSecondary">@color/gradient_start</item>
+        <item name="colorSurface">@color/card_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:statusBarColor">@color/app_background</item>
-        <!-- Customize your theme here. -->
         <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:fontFamily">@font/roboto</item>
+        <item name="fontFamily">@font/roboto</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
     </style>
 </resources>
