@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Payment Tracker</string>
+    <string name="blur_background_desc">A blurred background for the settings panel.</string>
 </resources>
