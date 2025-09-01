@@ -46,6 +46,16 @@ import androidx.core.content.ContextCompat;
 
 
 public class MainActivity extends AppCompatActivity {
+    private boolean isReceiverRegistered = false;
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!isReceiverRegistered) {
+            IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
+            registerReceiver(newMessageReceiver, filter);
+            isReceiverRegistered = true;
+        }
+    }
 
     private List<Message> messagesList = new ArrayList<>();
     private MessageAdapter messageAdapter;
@@ -149,7 +159,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(newMessageReceiver);
+        if (isReceiverRegistered) {
+            unregisterReceiver(newMessageReceiver);
+            isReceiverRegistered = false;
+        }
     }
 
     // REMOVED ViewTreeObserver block for Blurry
