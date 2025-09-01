@@ -48,12 +48,33 @@ import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
     private boolean isReceiverRegistered = false;
+    private BroadcastReceiver globalMessageReceiver;
+
     @Override
     protected void onResume() {
         super.onResume();
         if (!isReceiverRegistered) {
             IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
             LocalBroadcastManager.getInstance(this).registerReceiver(newMessageReceiver, filter);
+            // Register global receiver as fallback
+            globalMessageReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Log.d("MainActivity", "[GLOBAL] Broadcast received in MainActivity");
+                    Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
+                    if (newMessage != null) {
+                        runOnUiThread(() -> {
+                            messagesList.add(0, newMessage);
+                            messageAdapter.notifyItemInserted(0);
+                            recyclerViewMessages.scrollToPosition(0);
+                        });
+                        Log.d("MainActivity", "[GLOBAL] New message added: " + newMessage.content);
+                    } else {
+                        Log.d("MainActivity", "[GLOBAL] Received message is null!");
+                    }
+                }
+            };
+            registerReceiver(globalMessageReceiver, filter);
             isReceiverRegistered = true;
         }
     }
@@ -168,6 +189,10 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (isReceiverRegistered) {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(newMessageReceiver);
+            if (globalMessageReceiver != null) {
+                unregisterReceiver(globalMessageReceiver);
+                globalMessageReceiver = null;
+            }
             isReceiverRegistered = false;
         }
     }
