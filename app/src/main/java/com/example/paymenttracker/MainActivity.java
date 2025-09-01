@@ -99,10 +99,6 @@ public class MainActivity extends AppCompatActivity {
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
 
-        // This line was causing the crash, it will be removed in the next step
-        // SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        // sharedPreferences.edit().remove(MESSAGES).apply();
-
         loadMessagesFromPrefs();
         messageAdapter = new MessageAdapter(messagesList);
         recyclerViewMessages.setAdapter(messageAdapter);

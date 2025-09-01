@@ -24,8 +24,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -95,7 +93,6 @@ public class SmsForwardingService extends Service {
 
     private void saveMessageToPrefs(Message message) {
         SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.SHARED_PREFS, Context.MODE_PRIVATE);
-        // Load existing messages as a single string
         String messagesString = sharedPreferences.getString(MainActivity.MESSAGES, "");
         StringBuilder sb = new StringBuilder(messagesString);
         if (!messagesString.isEmpty()) {
