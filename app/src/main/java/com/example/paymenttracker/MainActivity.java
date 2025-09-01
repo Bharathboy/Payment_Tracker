@@ -74,7 +74,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             };
-            registerReceiver(globalMessageReceiver, filter);
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(globalMessageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(globalMessageReceiver, filter);
+            }
             isReceiverRegistered = true;
         }
     }
