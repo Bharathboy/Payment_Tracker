@@ -47,6 +47,13 @@ import androidx.core.content.ContextCompat;
 
 
 public class MainActivity extends AppCompatActivity {
+    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
+        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
+        urlEditText.setText(webhookUrl);
+        keyEditText.setText(secretKey);
+    }
     private boolean isReceiverRegistered = false;
     private BroadcastReceiver globalMessageReceiver;
 
