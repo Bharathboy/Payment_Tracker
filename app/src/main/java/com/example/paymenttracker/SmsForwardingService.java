@@ -69,8 +69,10 @@ public class SmsForwardingService extends Service {
 
                     Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
                     broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
+                    // Send both LocalBroadcast and global broadcast for debugging
                     LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
-                    Log.d(TAG, "New message LocalBroadcasted to MainActivity from sender: " + originatingAddress);
+                    sendBroadcast(broadcastIntent);
+                    Log.d(TAG, "New message LocalBroadcasted and globally broadcasted to MainActivity from sender: " + originatingAddress);
                 } else {
                     Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
                     /*
