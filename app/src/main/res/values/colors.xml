@@ -5,24 +5,24 @@
     <color name="white">#FFFFFF</color>
     <color name="accent_color">#0088CC</color>
     <!-- Background Colors -->
-    <color name="bg_primary">#1E1E2DCC</color> <!-- rgba(30,30,45,0.8) -->
-    <color name="bg_accent_translucent">#A445B22A</color> <!-- rgba(164,69,178,0.15) -->
-    <color name="bg_secondary">#191928D9</color> <!-- rgba(25,25,40,0.85) -->
-    <color name="bg_white_translucent">#FFFFFF26</color> <!-- rgba(255,255,255,0.15) -->
-    <color name="bg_black_translucent">#000000B3</color> <!-- rgba(0,0,0,0.7) -->
+    <color name="bg_primary">#1E1E2D</color> <!-- rgb(30,30,45) -->
+    <color name="bg_accent_translucent">#A445B2</color> <!-- rgb(164,69,178) fallback for translucent -->
+    <color name="bg_secondary">#191928</color> <!-- rgb(25,25,40) -->
+    <color name="bg_white_translucent">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
+    <color name="bg_black_translucent">#000000</color> <!-- rgb(0,0,0) fallback for translucent -->
     <color name="bg_deep">#1A1A2E</color> <!-- rgb(26,26,46) -->
     <color name="bg_blue">#0088CC</color> <!-- rgb(0,136,204) -->
-    <color name="bg_black_strong">#000000F2</color> <!-- rgba(0,0,0,0.95) -->
-    <color name="bg_dark_overlay">#141423F2</color> <!-- rgba(20,20,35,0.95) -->
-    <color name="bg_panel">#28283CE6</color> <!-- rgba(40,40,60,0.9) -->
-    <color name="bg_panel_strong">#1C1C28F2</color> <!-- rgba(28,28,40,0.95) -->
-    <color name="bg_panel_light">#28283C99</color> <!-- rgba(40,40,60,0.6) -->
+    <color name="bg_black_strong">#000000</color> <!-- rgb(0,0,0) fallback for translucent -->
+    <color name="bg_dark_overlay">#141423</color> <!-- rgb(20,20,35) fallback for translucent -->
+    <color name="bg_panel">#28283C</color> <!-- rgb(40,40,60) -->
+    <color name="bg_panel_strong">#1C1C28</color> <!-- rgb(28,28,40) -->
+    <color name="bg_panel_light">#28283C</color> <!-- rgb(40,40,60) fallback for translucent -->
     <!-- Text Colors -->
     <color name="text_black">#000000</color>
     <color name="text_white">#FFFFFF</color>
     <color name="text_primary">#E0E0FF</color> <!-- rgb(224,224,255) -->
-    <color name="text_primary_translucent">#E0E0FFCC</color> <!-- rgba(224,224,255,0.8) -->
-    <color name="text_primary_light">#E0E0FFB3</color> <!-- rgba(224,224,255,0.7) -->
+    <color name="text_primary_translucent">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
+    <color name="text_primary_light">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
     <color name="text_secondary">#AAAAAA</color>
     <color name="text_accent">#E0AAFF</color> <!-- rgb(224,170,255) -->
     <color name="text_pink">#FA4299</color> <!-- rgb(250,66,153) -->
@@ -31,14 +31,14 @@
     <!-- Border Colors -->
     <color name="border_black">#000000</color>
     <color name="border_white">#FFFFFF</color>
-    <color name="border_white_translucent">#FFFFFF0D</color> <!-- rgba(255,255,255,0.05) -->
+    <color name="border_white_translucent">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
     <color name="border_accent">#E0AAFF</color> <!-- rgb(224,170,255) -->
-    <color name="border_accent_translucent">#A445B24D</color> <!-- rgba(164,69,178,0.3) -->
+    <color name="border_accent_translucent">#A445B2</color> <!-- rgb(164,69,178) fallback for translucent -->
     <color name="border_pink">#FA4299</color>
     <color name="border_purple">#A445B2</color>
     <color name="border_grey">#AAAAAA</color>
     <color name="border_grey_light">#DDDDDD</color>
-    <color name="border_primary_translucent">#E0E0FFCC</color> <!-- rgba(224,224,255,0.8) -->
-    <color name="border_white_light">#FFFFFF1A</color> <!-- rgba(255,255,255,0.1) -->
-    <color name="border_primary_light">#E0E0FFB3</color> <!-- rgba(224,224,255,0.7) -->
+    <color name="border_primary_translucent">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
+    <color name="border_white_light">#FFFFFF</color> <!-- rgb(255,255,255) fallback for translucent -->
+    <color name="border_primary_light">#E0E0FF</color> <!-- rgb(224,224,255) fallback for translucent -->
 </resources>
