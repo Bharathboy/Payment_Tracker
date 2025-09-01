@@ -12,8 +12,8 @@
     <color name="white">#FFFFFF</color>
     <color name="status_green">#4CAF50</color>
 
-    <color name="color_primary_variant">#8BC34A</color>
-    <color name="color_secondary_variant">#FFC107</color>
-    <color name="colorPrimaryDark">#00796B</color>
-    <color name="colorAccent">#00BCD4</color>
+    <color name="gradient_start">#FFC107</color>
+    <color name="gradient_end">#4CAF50</color>
+    <color name="button_normal">#DA7A7A</color>
+    <color name="button_pressed">#4C95E1</color>
 </resources>
