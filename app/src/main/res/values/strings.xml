@@ -17,7 +17,7 @@
     <string name="webhook_url_hint">Enter Webhook URL</string>
     <string name="secret_key_hint">Enter Secret Key (Optional)</string>
     <string name="save_button_text">Save</string>
-    <string name="test_webhook_button">Test Webhook</string>
+    <string name="test_webhook_button">Test</string>
     <string name="cancel_button_text">Cancel</string>
 
     <string name="dialog_battery_optimization_title">Disable Battery Optimization</string>
