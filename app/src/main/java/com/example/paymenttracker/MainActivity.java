@@ -1,3 +1,7 @@
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import java.util.ArrayList;
+import java.util.List;
 package com.example.paymenttracker;
 
 import android.Manifest;
@@ -42,6 +46,11 @@ import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
 
+    private List<Message> messagesList = new ArrayList<>();
+    private MessageAdapter messageAdapter;
+    private RecyclerView recyclerViewMessages;
+    private BroadcastReceiver newMessageReceiver;
+
     private TextView statusTextView;
     // private ImageView blurBackground; // REMOVED
     private View rootLayout;
@@ -72,11 +81,38 @@ public class MainActivity extends AppCompatActivity {
         statusTextView = findViewById(R.id.statusTextView);
         // blurBackground = findViewById(R.id.blur_background); // REMOVED
         rootLayout = findViewById(R.id.root_layout);
-        RecyclerView recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
-
+        recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
-        MessageAdapter messageAdapter = new MessageAdapter(getSampleMessages()); // Assuming getSampleMessages() is defined elsewhere
+        messagesList.addAll(getSampleMessages());
+        messageAdapter = new MessageAdapter(messagesList);
         recyclerViewMessages.setAdapter(messageAdapter);
+
+        // BroadcastReceiver for new messages
+        newMessageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("com.example.paymenttracker.NEW_MESSAGE".equals(intent.getAction())) {
+                    Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
+                    if (newMessage != null) {
+                        messagesList.add(0, newMessage); // Add to top
+                        messageAdapter.notifyItemInserted(0);
+                        recyclerViewMessages.scrollToPosition(0);
+                    }
+                }
+            }
+        };
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
+        registerReceiver(newMessageReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(newMessageReceiver);
+    }
 
         // REMOVED ViewTreeObserver block for Blurry
         // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
