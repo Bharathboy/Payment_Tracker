@@ -150,42 +150,7 @@ public class MainActivity extends AppCompatActivity {
 
             dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
             
-            // TODO: Implement dialogSaveButton.setOnClickListener (Will be addressed next)
-            // Example:
-            dialogSaveButton.setOnClickListener(dv_save -> {
-                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
-                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
-                 if (webhookUrl.isEmpty() || secretKey.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Webhook URL and Secret Key cannot be empty", Toast.LENGTH_SHORT).show();
-                    return; 
-                }
-                saveSettingsFromDialog(webhookUrl, secretKey);
-                statusTextView.setText(R.string.status_ready_save_settings); 
-                checkAndRequestSmsPermission(); 
-                dialog.dismiss();
-            });
-
-            // TODO: Implement dialogTestButton.setOnClickListener (Will be addressed later)
-             dialogTestButton.setOnClickListener(dv_test -> {
-                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
-                String secretKey = dialogSecretKeyEditText.getText().toString().trim(); // Key might be optional for test depending on server
-                 if (webhookUrl.isEmpty()) {
-                    Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                // Call a method to perform the test, e.g., performTestWebhookRequest(webhookUrl, secretKey);
-                Toast.makeText(MainActivity.this, "Test button clicked (Not yet implemented)", Toast.LENGTH_SHORT).show();
-
-            });
-
-
-            dialog.show();
-        });
-    }
-
-    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
+    });
         String secretKey = sharedPreferences.getString(SECRET_KEY, "");
 
         urlEditText.setText(webhookUrl);
