@@ -26,7 +26,6 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 import okhttp3.Call;
 import okhttp3.Callback;
