@@ -185,7 +185,7 @@
                 android:enabled="true"
                 android:fontFamily="sans-serif-medium"
                 android:stateListAnimator="@anim/button_press"
-                android:text="Save & Start Service"
+                android:text="Save &amp; Start Service"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="16sp"
