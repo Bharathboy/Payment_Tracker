@@ -8,10 +8,13 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,6 +38,7 @@ import okhttp3.Response;
 public class SmsForwardingService extends Service {
     private static final String TAG = "SmsForwardingService";
     public static final String CHANNEL_ID = "SmsForwarderChannel";
+    private Handler mainHandler = new Handler(Looper.getMainLooper()); // CORRECTED LINE
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -59,22 +63,24 @@ public class SmsForwardingService extends Service {
                 long timestampMillis = smsMessage.getTimestampMillis();
 
                 PaymentDetails details = SmsParser.parse(messageBody);
+                String dateString = String.valueOf(timestampMillis);
+
+                Message newMessage;
                 if (details != null) {
                     Log.d(TAG, "Successfully parsed payment SMS in service.");
                     sendWebhook(this, details, messageBody);
-
-                    String dateString = String.valueOf(timestampMillis);
-                    Message newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
-
-                    saveMessageToPrefs(newMessage);
-
-                    Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
-                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
-                    sendBroadcast(broadcastIntent);
-                    Log.d(TAG, "New message globally broadcasted to MainActivity from sender: " + originatingAddress);
+                    newMessage = new Message(originatingAddress, messageBody, "SUBMITTED", dateString);
                 } else {
                     Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
+                    newMessage = new Message(originatingAddress, messageBody, "IGNORED", dateString);
                 }
+
+                saveMessageToPrefs(newMessage);
+
+                Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
+                broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
+                sendBroadcast(broadcastIntent);
+                Log.d(TAG, "New message globally broadcasted to MainActivity from sender: " + originatingAddress);
             }
         }
         return START_STICKY;
@@ -124,10 +130,17 @@ public class SmsForwardingService extends Service {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
                 Log.e(TAG, "Webhook failed to send", e);
             }
+
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    mainHandler.post(() -> Toast.makeText(context, "Webhook sent successfully", Toast.LENGTH_SHORT).show());
+                } else {
+                    mainHandler.post(() -> Toast.makeText(context, "Webhook failed to send", Toast.LENGTH_SHORT).show());
+                }
                 Log.d(TAG, "Webhook sent. Response code: " + response.code());
                 response.close();
             }

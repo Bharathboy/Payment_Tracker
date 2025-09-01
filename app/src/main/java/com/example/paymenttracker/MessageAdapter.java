@@ -7,7 +7,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.chip.Chip;
-import com.google.android.material.card.MaterialCardView; // Import MaterialCardView
+import com.google.android.material.card.MaterialCardView;
 import java.util.List;
 
 public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageViewHolder> {
@@ -55,14 +55,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         TextView tvSender, tvMessage, tvDate;
         Chip chipStatus;
-        MaterialCardView cardView; // Corrected type
+        MaterialCardView cardView;
         public MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             tvSender = itemView.findViewById(R.id.tvSender);
             tvMessage = itemView.findViewById(R.id.tvMessage);
             tvDate = itemView.findViewById(R.id.tvDate);
             chipStatus = itemView.findViewById(R.id.chipStatus);
-            cardView = (MaterialCardView) itemView; // Corrected cast
+            cardView = (MaterialCardView) itemView;
         }
     }
 }
