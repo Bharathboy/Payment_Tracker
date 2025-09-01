@@ -102,6 +102,48 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
+
+        // Place settingsButton click listener inside onCreate
+        settingsButton.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_webhook_settings, null);
+            builder.setView(dialogView);
+
+            final EditText dialogWebhookUrlEditText = dialogView.findViewById(R.id.dialogWebhookUrlEditText);
+            final EditText dialogSecretKeyEditText = dialogView.findViewById(R.id.dialogSecretKeyEditText);
+            Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
+            Button dialogTestButton = dialogView.findViewById(R.id.dialogTestButton);
+            Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+
+            loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
+
+            final AlertDialog dialog = builder.create();
+
+            dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
+            dialogSaveButton.setOnClickListener(dv_save -> {
+                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
+                if (webhookUrl.isEmpty() || secretKey.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Webhook URL and Secret Key cannot be empty", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                saveSettingsFromDialog(webhookUrl, secretKey);
+                statusTextView.setText(R.string.status_ready_save_settings);
+                checkAndRequestSmsPermission();
+                dialog.dismiss();
+            });
+            dialogTestButton.setOnClickListener(dv_test -> {
+                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
+                if (webhookUrl.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(MainActivity.this, "Test button clicked (Not yet implemented)", Toast.LENGTH_SHORT).show();
+            });
+            dialog.show();
+        });
     }
     @Override
     protected void onResume() {
