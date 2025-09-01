@@ -14,4 +14,15 @@
         <item name="colorOutline">@color/border_primary_light</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
+
+    <style name="AlertDialog.App" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/glass_panel_background</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="colorAccent">@color/button_normal</item>
+        <item name="buttonBarPositiveButtonStyle">@style/DialogButton.App</item>
+    </style>
+
+    <style name="DialogButton.App" parent="Widget.AppCompat.Button.Borderless.Colored">
+        <item name="android:textColor">@color/button_normal</item>
+    </style>
 </resources>

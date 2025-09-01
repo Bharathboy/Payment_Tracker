@@ -128,6 +128,24 @@ public class MainActivity extends AppCompatActivity {
         Button dialogTestWebhookButton = dialogView.findViewById(R.id.dialogTestWebhookButton);
         Button dialogTestTelegramButton = dialogView.findViewById(R.id.dialogTestTelegramButton);
         Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+        ImageButton webhookInfoButton = dialogView.findViewById(R.id.webhookInfoButton);
+        ImageButton telegramInfoButton = dialogView.findViewById(R.id.telegramInfoButton);
+
+        webhookInfoButton.setOnClickListener(v -> {
+            new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
+                    .setTitle("Webhook Settings Info")
+                    .setMessage("A webhook is a way to send real-time data from your app to an external URL. Enter a URL and an optional secret key for security.")
+                    .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                    .show();
+        });
+
+        telegramInfoButton.setOnClickListener(v -> {
+            new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
+                    .setTitle("Telegram Settings Info")
+                    .setMessage("A Telegram bot token and chat ID are required to forward messages to a Telegram chat or channel. You can get these by creating a bot on Telegram.")
+                    .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                    .show();
+        });
 
         loadSettingsForDialog(dialogWebhookUrlEditText, WEBHOOK_URL);
         loadSettingsForDialog(dialogSecretKeyEditText, SECRET_KEY);
