@@ -28,10 +28,10 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
     @Override
     public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
         Message msg = messages.get(position);
-        holder.tvSender.setText(msg.sender);
-        holder.tvMessage.setText(msg.message);
-        holder.tvDate.setText(msg.date);
-        holder.chipStatus.setText(msg.status);
+    holder.tvSender.setText(msg.sender);
+    holder.tvMessage.setText(msg.content);
+    holder.tvDate.setText(msg.date);
+    holder.chipStatus.setText(msg.status);
         // Set chip color based on status
         int colorRes;
         switch (msg.status) {
