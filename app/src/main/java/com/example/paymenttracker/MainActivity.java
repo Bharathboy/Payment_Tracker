@@ -199,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
             }
             isReceiverRegistered = false;
         }
+    }
 
     private java.util.List<Message> getSampleMessages() {
         java.util.List<Message> messages = new java.util.ArrayList<>();
