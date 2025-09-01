@@ -1,8 +1,9 @@
+
+package com.example.paymenttracker;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import java.util.ArrayList;
 import java.util.List;
-package com.example.paymenttracker;
 
 import android.Manifest;
 import android.content.Context;
