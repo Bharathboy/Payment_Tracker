@@ -7,13 +7,15 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
-import android.content.Intent;
+import android.content.Intent; // Ensure this import is present
 import android.content.SharedPreferences;
 import android.os.IBinder;
+// android.os.Message import removed
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
 
+import androidx.annotation.NonNull; // Added NonNull import
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
@@ -36,7 +38,6 @@ public class SmsForwardingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // This method is called when the service is started
         createNotificationChannel();
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this,
@@ -45,26 +46,45 @@ public class SmsForwardingService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("SMS Forwarding Active")
                 .setContentText("Listening for incoming payment SMS...")
-                .setSmallIcon(R.drawable.ic_notification) // We will create this icon later
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
                 .build();
 
-        // This is the command that makes it a foreground service
         startForeground(1, notification);
 
-        // If we received an SMS intent from our SmsReceiver, process it
         if (intent != null && Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) {
             for (SmsMessage smsMessage : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
                 String messageBody = smsMessage.getMessageBody();
+                String originatingAddress = smsMessage.getOriginatingAddress();
+                long timestampMillis = smsMessage.getTimestampMillis();
+
                 PaymentDetails details = SmsParser.parse(messageBody);
                 if (details != null) {
                     Log.d(TAG, "Successfully parsed payment SMS in service.");
                     sendWebhook(this, details, messageBody);
+
+                    String dateString = String.valueOf(timestampMillis);
+                    // Corrected to use your com.example.paymenttracker.Message class
+                    com.example.paymenttracker.Message newMessage = new com.example.paymenttracker.Message(originatingAddress, messageBody, "Received", dateString);
+
+                    Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
+                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", newMessage);
+                    sendBroadcast(broadcastIntent);
+                    Log.d(TAG, "New message broadcasted to MainActivity from sender: " + originatingAddress);
+                } else {
+                    Log.d(TAG, "SMS did not parse into PaymentDetails: " + messageBody);
+                    /*
+                    String dateString = String.valueOf(timestampMillis);
+                    // Corrected to use your com.example.paymenttracker.Message class if you uncomment this
+                    com.example.paymenttracker.Message nonPaymentMessage = new com.example.paymenttracker.Message(originatingAddress, messageBody, "Ignored", dateString);
+                    Intent broadcastIntent = new Intent("com.example.paymenttracker.NEW_MESSAGE");
+                    broadcastIntent.putExtra("com.example.paymenttracker.MESSAGE_OBJECT", nonPaymentMessage);
+                    sendBroadcast(broadcastIntent);
+                    Log.d(TAG, "Non-payment SMS broadcasted to MainActivity from sender: " + originatingAddress);
+                    */
                 }
             }
         }
-
-        // If the service is ever killed by the OS, this ensures it will restart
         return START_STICKY;
     }
 
@@ -102,11 +122,11 @@ public class SmsForwardingService extends Service {
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onFailure(@NonNull Call call, @NonNull IOException e) { // Added @NonNull
                 Log.e(TAG, "Webhook failed to send", e);
             }
             @Override
-            public void onResponse(Call call, Response response) {
+            public void onResponse(@NonNull Call call, @NonNull Response response) { // Added @NonNull
                 Log.d(TAG, "Webhook sent. Response code: " + response.code());
                 response.close();
             }
@@ -120,12 +140,15 @@ public class SmsForwardingService extends Service {
                 NotificationManager.IMPORTANCE_DEFAULT
         );
         NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(serviceChannel);
+        if (manager != null) {
+            manager.createNotificationChannel(serviceChannel);
+        }
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null; // We don't need to bind to this service
+        return null;
     }
 }
+

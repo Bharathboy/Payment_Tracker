@@ -1,4 +1,16 @@
 <resources>
     <string name="app_name">Payment Tracker</string>
     <string name="blur_background_desc">A blurred background for the settings panel.</string>
+    <string name="status_sms_permission_required">Status: SMS Permission is required.</string>
+    <string name="status_service_running">Status: Service is running. Listening for SMS.</string>
+    <string name="status_sms_permission_needed">Status: SMS permission needed.</string>
+    <string name="status_ready_save_settings">Status: Ready. Save settings to start the service.</string>
+    <!-- Other string resources -->
+    <string name="webhook_url_hint">Enter Webhook URL</string>
+    <string name="secret_key_hint">Enter Secret Key</string>
+    <string name="save_button_text">Save</string> <!-- Renamed from save_settings_button -->
+    <string name="test_webhook_button">Test Webhook</string>
+    <string name="status_placeholder">Status: Idle</string>
+    <string name="settings_button_text">Settings</string>
+    <string name="cancel_button_text">Cancel</string>
 </resources>

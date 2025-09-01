@@ -7,11 +7,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewTreeObserver;
+// import android.view.ViewTreeObserver; // REMOVED
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
+// import android.widget.ImageView; // REMOVED
 import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,50 +20,46 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+// import jp.wasabeef.blurry.Blurry; // REMOVED
 
-import java.io.IOException;
-
-import jp.wasabeef.blurry.Blurry;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+// OkHttp imports will be re-added when we implement testWebhook in the dialog
+// import org.json.JSONException;
+// import org.json.JSONObject;
+// import java.io.IOException;
+// import okhttp3.Call;
+// import okhttp3.Callback;
+// import okhttp3.MediaType;
+// import okhttp3.OkHttpClient;
+// import okhttp3.Request;
+// import okhttp3.RequestBody;
+// import okhttp3.Response;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    private EditText webhookUrlEditText;
-    private EditText secretKeyEditText;
-    private Button saveButton;
-    private Button testButton;
     private TextView statusTextView;
-    private ImageView blurBackground;
+    // private ImageView blurBackground; // REMOVED
     private View rootLayout;
-    private RecyclerView recyclerViewMessages;
-    private MessageAdapter messageAdapter;
+    private Button settingsButton;
 
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
     public static final String SECRET_KEY = "secretKey";
 
-    // This is the modern, recommended way to handle permission requests.
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
                     Toast.makeText(this, "SMS Permission Granted!", Toast.LENGTH_SHORT).show();
-                    startForwardingService(); // Start the service now that we have permission
+                    startForwardingService();
                 } else {
                     Toast.makeText(this, "SMS Permission Denied. The app cannot function without it.", Toast.LENGTH_LONG).show();
-                    statusTextView.setText("Status: SMS Permission is required.");
+                    statusTextView.setText(getString(R.string.status_sms_permission_required));
                 }
             });
 
@@ -71,45 +68,99 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Link our Java variables to the UI elements in the XML layout
-        webhookUrlEditText = findViewById(R.id.webhookUrlEditText);
-        secretKeyEditText = findViewById(R.id.secretKeyEditText);
-        saveButton = findViewById(R.id.saveButton);
-        testButton = findViewById(R.id.testButton);
+        settingsButton = findViewById(R.id.settingsButton);
         statusTextView = findViewById(R.id.statusTextView);
-        blurBackground = findViewById(R.id.blur_background);
+        // blurBackground = findViewById(R.id.blur_background); // REMOVED
         rootLayout = findViewById(R.id.root_layout);
-        recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
+        RecyclerView recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
 
-        // Setup RecyclerView for messages
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
-        messageAdapter = new MessageAdapter(getSampleMessages());
+        MessageAdapter messageAdapter = new MessageAdapter(getSampleMessages()); // Assuming getSampleMessages() is defined elsewhere
         recyclerViewMessages.setAdapter(messageAdapter);
 
-        // This is the key part: we wait for the layout to be drawn,
-        // then we capture it, blur it, and set it as the background.
-        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                // Remove the listener to prevent it from running multiple times
-                rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        // REMOVED ViewTreeObserver block for Blurry
+        // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        //     @Override
+        //     public void onGlobalLayout() {
+        //         rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        //         Blurry.with(MainActivity.this)
+        //                 .radius(25)
+        //                 .sampling(2)
+        //                 .capture(rootLayout)
+        //                 .into(blurBackground);
+        //     }
+        // });
 
-                // Use the Blurry library to create the effect
-                Blurry.with(MainActivity.this)
-                        .radius(25) // Blur radius
-                        .sampling(2) // Downscale factor for performance
-                        .capture(rootLayout) // Capture the entire root layout
-                        .into(blurBackground); // Apply the blurred image to our ImageView
-            }
+        settingsButton.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_webhook_settings, null);
+            builder.setView(dialogView);
+
+            final EditText dialogWebhookUrlEditText = dialogView.findViewById(R.id.dialogWebhookUrlEditText);
+            final EditText dialogSecretKeyEditText = dialogView.findViewById(R.id.dialogSecretKeyEditText);
+            Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
+            Button dialogTestButton = dialogView.findViewById(R.id.dialogTestButton);
+            Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
+
+            loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
+
+            final AlertDialog dialog = builder.create();
+
+            dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
+            
+            // TODO: Implement dialogSaveButton.setOnClickListener (Will be addressed next)
+            // Example:
+            dialogSaveButton.setOnClickListener(dv_save -> {
+                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+                String secretKey = dialogSecretKeyEditText.getText().toString().trim();
+                 if (webhookUrl.isEmpty() || secretKey.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Webhook URL and Secret Key cannot be empty", Toast.LENGTH_SHORT).show();
+                    return; 
+                }
+                saveSettingsFromDialog(webhookUrl, secretKey);
+                statusTextView.setText(R.string.status_ready_save_settings); 
+                checkAndRequestSmsPermission(); 
+                dialog.dismiss();
+            });
+
+            // TODO: Implement dialogTestButton.setOnClickListener (Will be addressed later)
+             dialogTestButton.setOnClickListener(dv_test -> {
+                String webhookUrl = dialogWebhookUrlEditText.getText().toString().trim();
+                String secretKey = dialogSecretKeyEditText.getText().toString().trim(); // Key might be optional for test depending on server
+                 if (webhookUrl.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Webhook URL cannot be empty for testing", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                // Call a method to perform the test, e.g., performTestWebhookRequest(webhookUrl, secretKey);
+                Toast.makeText(MainActivity.this, "Test button clicked (Not yet implemented)", Toast.LENGTH_SHORT).show();
+
+            });
+
+
+            dialog.show();
         });
-
-        loadSettings();
-
-        saveButton.setOnClickListener(v -> saveSettingsAndStartService());
-        testButton.setOnClickListener(v -> sendTestWebhook());
     }
 
-    // Sample data for demonstration
+    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
+        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
+
+        urlEditText.setText(webhookUrl);
+        keyEditText.setText(secretKey);
+    }
+    
+    // Added saveSettingsFromDialog (implementation from previous interaction)
+    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(WEBHOOK_URL, webhookUrl);
+        editor.putString(SECRET_KEY, secretKey);
+        editor.apply();
+        Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show();
+    }
+
     private java.util.List<Message> getSampleMessages() {
         java.util.List<Message> messages = new java.util.ArrayList<>();
         messages.add(new Message(
@@ -145,93 +196,24 @@ public class MainActivity extends AppCompatActivity {
         return messages;
     }
 
-    private void saveSettingsAndStartService() {
-        // First, save the user's input
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(WEBHOOK_URL, webhookUrlEditText.getText().toString().trim());
-        editor.putString(SECRET_KEY, secretKeyEditText.getText().toString().trim());
-        editor.apply();
-        Toast.makeText(this, "Settings Saved!", Toast.LENGTH_SHORT).show();
 
-        // Then, check for permission and start the background service
-        checkAndRequestSmsPermission();
-    }
-
-    private void checkAndRequestSmsPermission() {
+    public void checkAndRequestSmsPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED) {
-            // Permission is already granted, so we can start the service
             startForwardingService();
         } else {
-            // Permission is not granted, so we ask the user for it
             requestPermissionLauncher.launch(Manifest.permission.RECEIVE_SMS);
         }
     }
 
-    private void startForwardingService() {
+    public void startForwardingService() {
         Intent serviceIntent = new Intent(this, SmsForwardingService.class);
-        // This command starts the service and makes the notification appear
         startForegroundService(serviceIntent);
-        statusTextView.setText("Status: Service is running. Listening for SMS.");
+        statusTextView.setText(getString(R.string.status_service_running));
         Log.d("MainActivity", "Foreground service started successfully.");
     }
-
-    private void loadSettings() {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String url = sharedPreferences.getString(WEBHOOK_URL, "");
-        String secret = sharedPreferences.getString(SECRET_KEY, "");
-        webhookUrlEditText.setText(url);
-        secretKeyEditText.setText(secret);
-
-        // Check permission on load to update the status text correctly
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
-            statusTextView.setText("Status: SMS permission needed.");
-        } else if (url.isEmpty()) {
-            statusTextView.setText("Status: Ready. Save settings to start the service.");
-        } else {
-            statusTextView.setText("Status: Service is running. Listening for SMS.");
-        }
-    }
-
-    private void sendTestWebhook() {
-        String webhookUrl = webhookUrlEditText.getText().toString().trim();
-        String secretKey = secretKeyEditText.getText().toString().trim();
-
-        if (webhookUrl.isEmpty()) {
-            Toast.makeText(this, "Please enter a Webhook URL first.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        JSONObject testPayload = new JSONObject();
-        try {
-            testPayload.put("message", "This is a test webhook from your Smart SMS Forwarder app!");
-            testPayload.put("status", "SUCCESS");
-        } catch (JSONException e) {
-            // This should not happen
-        }
-
-        OkHttpClient client = new OkHttpClient();
-        MediaType JSON = MediaType.get("application/json; charset=utf-8");
-        RequestBody body = RequestBody.create(testPayload.toString(), JSON);
-        Request request = new Request.Builder()
-                .url(webhookUrl)
-                .post(body)
-                .addHeader("X-My-App-Signature", secretKey)
-                .build();
-
-        Toast.makeText(this, "Sending test webhook...", Toast.LENGTH_SHORT).show();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                // We must use runOnUiThread to show a Toast from a background thread
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Test Failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Test Response Code: " + response.code(), Toast.LENGTH_LONG).show());
-                response.close();
-            }
-        });
-    }
+    
+    // Placeholder for performTestWebhookRequest - to be implemented fully later
+    // private void performTestWebhookRequest(String url, String key) {
+    //    // OkHttp logic will go here
+    // }
 }
