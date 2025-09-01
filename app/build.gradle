@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.paymenttracker"
-        minSdk 26
+        minSdk 28
         targetSdk 36
         versionCode 1
         versionName "1.0"
@@ -16,7 +16,6 @@ android {
         renderscriptTargetApi 18
         renderscriptSupportModeEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
@@ -32,11 +31,12 @@ android {
 }
 
 dependencies {
+
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity
     implementation libs.okhttp
-    implementation libs.androidx.cardview
+    implementation libs.androidx.cardview // CORRECTED LINE
     implementation libs.constraintlayout
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     testImplementation libs.junit

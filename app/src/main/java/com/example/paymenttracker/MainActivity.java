@@ -7,12 +7,15 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -24,6 +27,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -61,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         urlEditText.setText(webhookUrl);
         keyEditText.setText(secretKey);
     }
+
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver messageReceiver;
     private boolean isReceiverRegistered = false;
@@ -89,6 +96,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Correct way to handle full-screen layouts and display cutouts
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        if (windowInsetsController != null) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+            windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+
         setContentView(R.layout.activity_main);
 
         settingsButton = findViewById(R.id.settingsButton);
@@ -117,6 +133,11 @@ public class MainActivity extends AppCompatActivity {
             loadSettingsForDialog(dialogWebhookUrlEditText, dialogSecretKeyEditText);
 
             final AlertDialog dialog = builder.create();
+
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            }
 
             dialogCancelButton.setOnClickListener(dv -> dialog.dismiss());
             dialogSaveButton.setOnClickListener(dv_save -> {
@@ -192,12 +213,8 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         Set<String> messageSet = sharedPreferences.getStringSet(MESSAGES, new HashSet<>());
         List<Message> loadedMessages = new ArrayList<>();
-        if (messageSet.isEmpty()) {
-            loadedMessages.addAll(getSampleMessages());
-        } else {
-            for (String messageString : messageSet) {
-                loadedMessages.add(Message.fromString(messageString));
-            }
+        for (String messageString : messageSet) {
+            loadedMessages.add(Message.fromString(messageString));
         }
         Collections.reverse(loadedMessages);
         messagesList.clear();
@@ -206,29 +223,6 @@ public class MainActivity extends AppCompatActivity {
             messageAdapter.notifyDataSetChanged();
         }
         Log.d("MainActivity", "Loaded " + messagesList.size() + " messages from prefs.");
-    }
-
-    private List<Message> getSampleMessages() {
-        List<Message> messages = new ArrayList<>();
-        messages.add(new Message(
-                "+919741430392",
-                "Your a/c is credited with Rs10.99 on 31-08-2025 from Test User with VPA test@upi UPI Ref No 123456789012",
-                "IGNORED",
-                String.valueOf(System.currentTimeMillis())
-        ));
-        messages.add(new Message(
-                "JX-KOTAKB-S",
-                "Sent Rs.10.37 from Kotak Bank AC X2052 to riseupbab@ybl on 31-08-25.UPI Ref 136056932435. Not you, https://kotak.com/KBANKT/Fraud",
-                "IGNORED",
-                String.valueOf(System.currentTimeMillis() - 10000)
-        ));
-        messages.add(new Message(
-                "JX-KOTAKB-S",
-                "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
-                "SUBMITTED",
-                String.valueOf(System.currentTimeMillis() - 20000)
-        ));
-        return messages;
     }
 
     public void checkAndRequestSmsPermission() {
@@ -247,7 +241,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void testWebhook(String webhookUrl, String secretKey) {
-        // Create a dummy payload for testing
         JSONObject jsonPayload = new JSONObject();
         try {
             jsonPayload.put("amount_received", "1.00");
