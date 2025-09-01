@@ -178,18 +178,19 @@
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_marginStart="10dp"
+                android:background="@drawable/gradient_button"
+                android:contentDescription="Save configuration and start service"
+                android:enabled="false"
+                android:fontFamily="sans-serif-medium"
+                android:stateListAnimator="@anim/button_press"
                 android:text="Save &amp; Start Service"
                 android:textAllCaps="false"
                 android:textSize="16sp"
-                android:fontFamily="sans-serif-medium"
-                android:enabled="false"
-                android:contentDescription="Save configuration and start service"
                 app:cornerRadius="16dp"
-                android:background="@drawable/gradient_button"
-                app:layout_constraintStart_toEndOf="@id/testButton"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/testButton"
                 app:layout_constraintWidth_percent="0.65"
-                android:stateListAnimator="@anim/button_press" />
+                tools:layout_editor_absoluteY="0dp" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
