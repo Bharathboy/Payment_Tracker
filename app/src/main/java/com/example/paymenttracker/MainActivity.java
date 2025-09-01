@@ -204,25 +204,28 @@ public class MainActivity extends AppCompatActivity {
     // REMOVED ViewTreeObserver block for Blurry
     // rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
     //     @Override
-    //     public void onGlobalLayout() {
-    //         rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-    //         Blurry.with(MainActivity.this)
-    //                 .radius(25)
-    //                 .sampling(2)
-    //                 .capture(rootLayout)
-    //                 .into(blurBackground);
-    //     }
-    // });
-
-    private void loadSettingsForDialog(EditText urlEditText, EditText keyEditText) {
-        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
-        String webhookUrl = sharedPreferences.getString(WEBHOOK_URL, "");
-        String secretKey = sharedPreferences.getString(SECRET_KEY, "");
-        urlEditText.setText(webhookUrl);
-        keyEditText.setText(secretKey);
-    }
-
-    private void saveSettingsFromDialog(String webhookUrl, String secretKey) {
+            newMessageReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Log.d("MainActivity", "[LOCAL] onReceive called. Intent: " + intent);
+                    if ("com.example.paymenttracker.NEW_MESSAGE".equals(intent.getAction())) {
+                        Log.d("MainActivity", "[LOCAL] Broadcast received in MainActivity");
+                        String testMsg = intent.getStringExtra("test_message");
+                        Log.d("MainActivity", "[LOCAL] test_message extra: " + testMsg);
+                        Message newMessage = intent.getParcelableExtra("com.example.paymenttracker.MESSAGE_OBJECT");
+                        if (newMessage != null) {
+                            runOnUiThread(() -> {
+                                messagesList.add(0, newMessage); // Add to top
+                                messageAdapter.notifyItemInserted(0);
+                                recyclerViewMessages.scrollToPosition(0);
+                            });
+                            Log.d("MainActivity", "[LOCAL] New message added: " + newMessage.content);
+                        } else {
+                            Log.d("MainActivity", "[LOCAL] Received message is null!");
+                        }
+                    }
+                }
+            };
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(WEBHOOK_URL, webhookUrl);
@@ -248,6 +251,9 @@ public class MainActivity extends AppCompatActivity {
         messages.add(new Message(
             "JX-KOTAKB-S",
             "Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435.",
+                Log.d("MainActivity", "[GLOBAL] onReceive called. Intent: " + intent);
+                String testMsg = intent.getStringExtra("test_message");
+                Log.d("MainActivity", "[GLOBAL] test_message extra: " + testMsg);
             "SUBMITTED",
             "Aug 31, 2025 19:31"
         ));
