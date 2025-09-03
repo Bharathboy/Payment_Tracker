@@ -26,6 +26,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
+import android.view.LayoutInflater;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -56,15 +57,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TelegramSender.TelegramSendCallback {
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver messageReceiver;
+    private BroadcastReceiver statusReceiver; // New receiver for status updates
     private boolean isReceiverRegistered = false;
     private List<Message> messagesList = new ArrayList<>();
     private MessageAdapter messageAdapter;
     private RecyclerView recyclerViewMessages;
     private TextView statusTextView;
     private TextView emptyStateTextView;
+    private ImageButton notificationButton;
+    private TelegramSender telegramSender;
+
 
     public static final String SHARED_PREFS = "sharedPrefs";
     public static final String WEBHOOK_URL = "webhookUrl";
@@ -109,12 +114,16 @@ public class MainActivity extends AppCompatActivity {
 
         ImageButton settingsButton = findViewById(R.id.settingsButton);
         ImageButton menuButton = findViewById(R.id.menuButton);
+        notificationButton = findViewById(R.id.notificationButton); // Initialize the new button
+        notificationButton.setVisibility(View.GONE); // Hide it by default
         statusTextView = findViewById(R.id.statusTextView);
         ImageView statusInfoIcon = findViewById(R.id.statusInfoIcon);
         statusTextView = findViewById(R.id.statusTextView);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
         emptyStateTextView = findViewById(R.id.emptyStateText);
+        telegramSender = new TelegramSender(); // Instantiate TelegramSender
+
 
         loadMessagesFromPrefs();
         messageAdapter = new MessageAdapter(messagesList);
@@ -145,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button dialogSaveButton = dialogView.findViewById(R.id.dialogSaveButton);
         Button dialogTestWebhookButton = dialogView.findViewById(R.id.dialogTestWebhookButton);
-        Button dialogTestTelegramButton = dialogView.findViewById(R.id.dialogTestTelegramButton);
+        final Button dialogTestTelegramButton = dialogView.findViewById(R.id.dialogTestTelegramButton); // Add final
         Button dialogCancelButton = dialogView.findViewById(R.id.dialogCancelButton);
         ImageButton webhookInfoButton = dialogView.findViewById(R.id.webhookInfoButton);
         ImageButton telegramInfoButton = dialogView.findViewById(R.id.telegramInfoButton);
@@ -386,7 +395,8 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         loadMessagesFromPrefs();
         if (!isReceiverRegistered) {
-            IntentFilter filter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
+            // Register receiver for new messages
+            IntentFilter messageFilter = new IntentFilter("com.example.paymenttracker.NEW_MESSAGE");
             messageReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
@@ -433,13 +443,30 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
 
+            // Register receiver for forwarding status updates
+            IntentFilter statusFilter = new IntentFilter(SmsForwardingService.ACTION_FORWARDING_STATUS);
+            statusReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (SmsForwardingService.ACTION_FORWARDING_STATUS.equals(intent.getAction())) {
+                        String errorMessage = intent.getStringExtra(SmsForwardingService.EXTRA_MESSAGE);
+                        runOnUiThread(() -> {
+                            onTelegramSendFailure(errorMessage);
+                        });
+                    }
+                }
+            };
+
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(messageReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+                registerReceiver(messageReceiver, messageFilter, Context.RECEIVER_NOT_EXPORTED);
+                registerReceiver(statusReceiver, statusFilter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                registerReceiver(messageReceiver, filter);
+                registerReceiver(messageReceiver, messageFilter);
+                registerReceiver(statusReceiver, statusFilter);
             }
             isReceiverRegistered = true;
-            Log.d("MainActivity", "Message receiver registered.");
+            Log.d("MainActivity", "Message and status receivers registered.");
         }
     }
 
@@ -448,6 +475,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (isReceiverRegistered) {
             unregisterReceiver(messageReceiver);
+            unregisterReceiver(statusReceiver); // Unregister the status receiver
             isReceiverRegistered = false;
         }
     }
@@ -647,46 +675,67 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        // Use the TelegramSender instance with the callback
+        telegramSender.setCallback(this);
+        try {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("amount", "1.00");
+            jsonObject.put("upiRefId", "TEST1234567890");
+            jsonObject.put("senderName", "Test User");
+            jsonObject.put("senderVpa", "test@upi");
+            jsonObject.put("fullSmsBody", "This is a test message from your app.");
+            jsonObject.put("bank", "Test Bank");
+            jsonObject.put("dateTime", "2023-10-27 10:30:00");
+            jsonObject.put("notes", "Testing");
 
-        executor.execute(() -> {
-            try {
-                TelegramSender telegramSender = new TelegramSender();
+            String jsonPayload = jsonObject.toString(4);
 
-                // Build JSON using JSONObject for pretty print
-                JSONObject jsonObject = new JSONObject();
-                jsonObject.put("amount", "1.00");
-                jsonObject.put("upiRefId", "TEST1234567890");
-                jsonObject.put("senderName", "Test User");
-                jsonObject.put("senderVpa", "test@upi");
-                jsonObject.put("fullSmsBody", "This is a test message from your app.");
-                jsonObject.put("bank", "Test Bank");
-                jsonObject.put("dateTime", "2023-10-27 10:30:00");
-                jsonObject.put("notes", "Testing");
+            telegramSender.sendPaymentDetails(botToken, chatId, jsonPayload);
 
-                // Pretty print with 4 spaces indentation
-                String jsonPayload = jsonObject.toString(4);
+        } catch (Exception e) {
+            Log.e("TelegramTest", "Error sending Telegram test message", e);
+            showErrorMessage("Error creating Telegram test message: " + e.getMessage());
+        }
+    }
 
-                // Send JSON as text message
-                telegramSender.sendPaymentDetails(botToken, chatId, jsonPayload);
+    @Override
+    public void onTelegramSendSuccess() {
+        // Hide the notification icon on success
+        notificationButton.setVisibility(View.GONE);
+        Toast.makeText(MainActivity.this, "Test Telegram OK. Check the channel.", Toast.LENGTH_LONG).show();
+        Log.i("MainActivity", "Telegram message sent successfully.");
+    }
 
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this,
-                                "Test Telegram message sent. Check the channel.",
-                                Toast.LENGTH_LONG).show()
-                );
+    @Override
+    public void onTelegramSendFailure(String errorMessage) {
+        // Show the notification icon and set a click listener to show the error
+        notificationButton.setVisibility(View.VISIBLE);
+        notificationButton.setOnClickListener(v -> showErrorMessage(errorMessage));
+        Toast.makeText(MainActivity.this, "Test Telegram Failed. Tap the notification icon for details.", Toast.LENGTH_LONG).show();
+        Log.e("MainActivity", "Telegram message failed to send: " + errorMessage);
+    }
 
-            } catch (Exception e) {
-                Log.e("TelegramTest", "Error sending Telegram test message", e);
+    private void showErrorMessage(String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_error_message, null);
+        builder.setView(dialogView);
 
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this,
-                                "Test Telegram error: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show()
-                );
-            } finally {
-                executor.shutdown();
-            }
-        });
+        TextView titleTextView = dialogView.findViewById(R.id.dialogTitleTextView);
+        TextView messageTextView = dialogView.findViewById(R.id.dialogMessageTextView);
+        Button okButton = dialogView.findViewById(R.id.dialogOkButton);
+
+        titleTextView.setText(R.string.forwarding_error_title);
+        messageTextView.setText(message);
+
+        final AlertDialog dialog = builder.create();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        okButton.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 }

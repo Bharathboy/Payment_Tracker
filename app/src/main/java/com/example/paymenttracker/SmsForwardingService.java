@@ -38,6 +38,12 @@ import okhttp3.Response;
 public class SmsForwardingService extends Service {
     private static final String TAG = "SmsForwardingService";
     public static final String CHANNEL_ID = "SmsForwarderChannel";
+    public static final String ACTION_FORWARDING_STATUS = "com.example.paymenttracker.FORWARDING_STATUS";
+    public static final String EXTRA_STATUS_TYPE = "statusType";
+    public static final String EXTRA_MESSAGE = "message";
+    public static final String STATUS_TELEGRAM_FAILURE = "telegramFailure";
+    public static final String STATUS_WEBHOOK_FAILURE = "webhookFailure";
+
     private Handler mainHandler;
 
     @Override
@@ -119,6 +125,8 @@ public class SmsForwardingService extends Service {
             if (!hasWebhook && !hasTelegram) {
                 Log.d(TAG, "Parsed payment SMS but no forwarding options set.");
                 newMessage = new Message(originatingAddress, fullMessage, "SET FORWARDER!", dateString);
+                // Also broadcast an error status to MainActivity
+                broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Please configure Telegram or Webhook settings.");
             } else {
                 Log.d(TAG, "Successfully parsed payment SMS.");
 
@@ -128,6 +136,7 @@ public class SmsForwardingService extends Service {
                         sendWebhook(details, fullMessage, webhookUrl, secretKey);
                     } catch (Exception e) {
                         Log.e(TAG, "Failed to send webhook: " + e.getMessage(), e);
+                        broadcastForwardingStatus(STATUS_WEBHOOK_FAILURE, "Failed to send webhook: " + e.getMessage());
                     }
                 }
 
@@ -137,6 +146,7 @@ public class SmsForwardingService extends Service {
                         sendTelegramMessage(details, fullMessage, telegramBotToken, telegramChatId);
                     } catch (Exception e) {
                         Log.e(TAG, "Failed to send Telegram message: " + e.getMessage(), e);
+                        broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Failed to send Telegram message: " + e.getMessage());
                     }
                 }
 
@@ -171,6 +181,14 @@ public class SmsForwardingService extends Service {
         broadcastIntent.putExtra("timestamp", message.timestamp != null ? message.timestamp : String.valueOf(System.currentTimeMillis()));
         sendBroadcast(broadcastIntent);
         Log.d(TAG, "New message broadcasted: " + message.sender);
+    }
+
+    private void broadcastForwardingStatus(String statusType, String errorMessage) {
+        Intent statusIntent = new Intent(ACTION_FORWARDING_STATUS);
+        statusIntent.putExtra(EXTRA_STATUS_TYPE, statusType);
+        statusIntent.putExtra(EXTRA_MESSAGE, errorMessage);
+        sendBroadcast(statusIntent);
+        Log.d(TAG, "Forwarding status broadcasted: " + statusType + " - " + errorMessage);
     }
 
     private void saveMessageToPrefs(Message message) {
@@ -216,7 +234,7 @@ public class SmsForwardingService extends Service {
             jsonPayload.put("sender_vpa", details.senderVpa);
             jsonPayload.put("full_sms_body", fullSms);
         } catch (JSONException e) {
-            showToast("Error creating JSON payload");
+            broadcastForwardingStatus(STATUS_WEBHOOK_FAILURE, "Error creating JSON payload for webhook: " + e.getMessage());
             Log.e(TAG, "Error creating JSON payload", e);
             return;
         }
@@ -233,12 +251,13 @@ public class SmsForwardingService extends Service {
 
         client.newCall(request).enqueue(new Callback() {
             @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                showToast("Webhook failed to send");
+                broadcastForwardingStatus(STATUS_WEBHOOK_FAILURE, "Webhook failed to send: " + e.getMessage());
                 Log.e(TAG, "Webhook failed to send", e);
             }
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    showToast("Webhook failed: " + response.code());
+                    String errorBody = response.body() != null ? response.body().string() : "empty";
+                    broadcastForwardingStatus(STATUS_WEBHOOK_FAILURE, "Webhook failed: " + response.code() + ", Body: " + errorBody);
                     Log.e(TAG, "Webhook failed with code: " + response.code());
                 } else {
                     Log.d(TAG, "Webhook sent successfully. Response code: " + response.code());
@@ -265,7 +284,7 @@ public class SmsForwardingService extends Service {
             json.put("notes", details.notes != null ? details.notes : "");
             jsonString = "<pre>" + json.toString(4) + "</pre>"; // Pretty print with HTML parse mode
         } catch (JSONException e) {
-            showToast("Error creating Telegram payload");
+            broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Error creating JSON payload for Telegram: " + e.getMessage());
             Log.e(TAG, "Error creating JSON payload", e);
             return;
         }
@@ -277,6 +296,7 @@ public class SmsForwardingService extends Service {
             requestJson.put("parse_mode", "HTML");
         } catch (JSONException e) {
             Log.e(TAG, "Error creating request JSON", e);
+            broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Error creating request JSON for Telegram: " + e.getMessage());
             return;
         }
 
@@ -290,13 +310,13 @@ public class SmsForwardingService extends Service {
 
         client.newCall(request).enqueue(new Callback() {
             @Override public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                showToast("Failed to send message to Telegram");
+                broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Failed to send message to Telegram: " + e.getMessage());
                 Log.e(TAG, "Failed to send message to Telegram", e);
             }
             @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "empty";
-                    showToast("Telegram send failed");
+                    broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Telegram send failed: " + response.code() + ", Body: " + errorBody);
                     Log.e(TAG, "Error: " + response.code() + ", Body: " + errorBody);
                 } else {
                     Log.d(TAG, "Message sent to Telegram successfully. Response code: " + response.code());
@@ -333,10 +353,6 @@ public class SmsForwardingService extends Service {
             if (manager != null) manager.createNotificationChannel(serviceChannel);
             Log.d(TAG, "Notification channel created.");
         }
-    }
-
-    private void showToast(String message) {
-        mainHandler.post(() -> Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show());
     }
 
     @Nullable
