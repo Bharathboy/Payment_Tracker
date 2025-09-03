@@ -65,10 +65,23 @@
             android:text="Received Rs.10.37 in your Kotak Bank AC X2052 from bharath.0515-3@waaxis on 31-08-25.UPI Ref:136056932435."
             android:textColor="@color/text_primary"
             android:textSize="15sp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:maxLines="3"
+            android:ellipsize="end"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvDate" />
+
+        <ImageView
+            android:id="@+id/ivExpandIcon"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:src="@drawable/ic_expand_more"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvMessage"
+            app:tint="@color/white" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
