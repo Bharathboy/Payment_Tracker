@@ -164,7 +164,7 @@ public class SmsParser {
         boolean isReceived = RECEIVED_KEYWORDS.matcher(s).find();
         boolean isSent = SENT_KEYWORDS.matcher(s).find();
 
-        // This is the core logic that prevents non-payment messages from being matched
+        // This is the core logic that prevents non-payment messages from being matched.
         // Returns null if only a sent keyword is found, or if no payment keywords are present.
         boolean hasPaymentKeyword = PAYMENT_KEYWORDS.matcher(s).find();
 
