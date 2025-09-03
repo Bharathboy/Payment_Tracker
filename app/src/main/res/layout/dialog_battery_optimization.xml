@@ -1,65 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@drawable/glass_panel_background">
-
-    <TextView
-        android:id="@+id/dialogTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Disable Battery Optimization"
-        android:fontFamily="@font/roboto_bold"
-        android:textSize="20sp"
-        android:textColor="@android:color/white"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/dialogMessage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="For Payment Tracker to work reliably in the background, please disable battery optimization for this app."
-        android:textColor="@android:color/white"
-        android:fontFamily="@font/roboto_regular"
-        android:textSize="14sp"
-        android:layout_marginBottom="24dp" />
+    android:layout_margin="16dp"
+    app:cardBackgroundColor="@color/bg_panel"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="8dp"
+    app:strokeColor="@color/border_primary_light"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <Button
-            android:id="@+id/dialogCancelButton"
+        <TextView
+            android:id="@+id/dialogTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
-            android:textColor="@android:color/white"
-            android:fontFamily="@font/roboto_regular"
-            android:layout_marginEnd="16dp"
-            android:padding="12dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:backgroundTint="@color/bg_blue"
-            app:cornerRadius="28dp" />
-
-        <Button
-            android:id="@+id/dialogSettingsButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Go to Settings"
-            android:textColor="@android:color/white"
+            android:text="Disable Battery Optimization"
             android:fontFamily="@font/roboto_bold"
-            android:padding="12dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:backgroundTint="@color/status_green"
-            app:cornerRadius="28dp" />
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/dialogMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="For Payment Tracker to work reliably in the background, please disable battery optimization for this app."
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/roboto_regular"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/dialogCancelButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:textColor="@color/white"
+                android:fontFamily="@font/roboto_regular"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/bg_blue"
+                android:textStyle="bold"
+                app:cornerRadius="28dp" />
+
+            <Button
+                android:id="@+id/dialogSettingsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Go to Settings"
+                android:textColor="@color/white"
+                android:fontFamily="@font/roboto_bold"
+                android:backgroundTint="@color/status_green"
+                android:textStyle="bold"
+                app:cornerRadius="28dp" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

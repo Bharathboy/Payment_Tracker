@@ -352,29 +352,29 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
     }
 
     private void showInfoDialog(String title, String message) {
-        // Inflate a custom title layout
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         LayoutInflater inflater = getLayoutInflater();
-        View customTitleView = inflater.inflate(R.layout.dialog_custom_title, null);
-        TextView titleTextView = customTitleView.findViewById(R.id.customTitleTextView);
-        titleTextView.setText(Html.fromHtml("<b>" + title + "</b>", Html.FROM_HTML_MODE_LEGACY));
+        View dialogView = inflater.inflate(R.layout.dialog_info_message, null);
+        builder.setView(dialogView);
 
-        AlertDialog dialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
-                .setCustomTitle(customTitleView)
-                .setMessage(Html.fromHtml(message, Html.FROM_HTML_MODE_LEGACY))
-                .setPositiveButton("OK", (dialogInterface, which) -> dialogInterface.dismiss())
-                .show();
+        TextView titleTextView = dialogView.findViewById(R.id.dialogTitleTextView);
+        TextView messageTextView = dialogView.findViewById(R.id.dialogMessageTextView);
+        Button okButton = dialogView.findViewById(R.id.dialogOkButton);
 
-        // Get the message TextView from the dialog and make links clickable
-        TextView messageTextView = dialog.findViewById(android.R.id.message);
-        if (messageTextView != null) {
-            messageTextView.setMovementMethod(LinkMovementMethod.getInstance());
+        titleTextView.setText(title);
+        messageTextView.setText(Html.fromHtml(message, Html.FROM_HTML_MODE_LEGACY));
+        messageTextView.setMovementMethod(LinkMovementMethod.getInstance()); // Make links clickable
+
+        final AlertDialog dialog = builder.create();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
 
-        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-        if (positiveButton != null) {
-            positiveButton.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.button_normal));
-        }
+        okButton.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
+
 
     private void saveSettingsFromDialog(String key, String value) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
@@ -711,7 +711,7 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         // Show the notification icon and set a click listener to show the error
         notificationButton.setVisibility(View.VISIBLE);
         notificationButton.setOnClickListener(v -> showErrorMessage(errorMessage));
-        Toast.makeText(MainActivity.this, "Test Telegram Failed. Tap the notification icon for details.", Toast.LENGTH_LONG).show();
+        Toast.makeText(MainActivity.this, "Test Telegram Failed. Tap the Error icon for details.", Toast.LENGTH_LONG).show();
         Log.e("MainActivity", "Telegram message failed to send: " + errorMessage);
     }
 

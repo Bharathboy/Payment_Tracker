@@ -1,73 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/glass_panel_background"
-    android:padding="20dp"
-    android:elevation="4dp"
-    android:layout_gravity="center">
+    android:layout_margin="16dp"
+    app:cardBackgroundColor="@color/bg_panel"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="8dp"
+    app:strokeColor="@color/border_primary_light"
+    app:strokeWidth="1dp">
 
-    <TextView
-        android:id="@+id/dialogTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="More Info"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/aboutItem"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="About"
-        android:textSize="18sp"
-        android:textColor="@color/text_primary"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <TextView
-        android:id="@+id/contactItem"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Contact"
-        android:textSize="18sp"
-        android:textColor="@color/text_primary"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/dialogTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="More Info"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp" />
 
-    <TextView
-        android:id="@+id/termsItem"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Terms"
-        android:textSize="18sp"
-        android:textColor="@color/text_primary"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/aboutItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="About"
+            android:textSize="18sp"
+            android:textColor="@color/text_primary"
+            android:paddingVertical="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
 
-    <TextView
-        android:id="@+id/privacyItem"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Privacy"
-        android:textSize="18sp"
-        android:textColor="@color/text_primary"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/contactItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contact"
+            android:textSize="18sp"
+            android:textColor="@color/text_primary"
+            android:paddingVertical="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/termsItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Terms"
+            android:textSize="18sp"
+            android:textColor="@color/text_primary"
+            android:paddingVertical="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+
+        <TextView
+            android:id="@+id/privacyItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Privacy"
+            android:textSize="18sp"
+            android:textColor="@color/text_primary"
+            android:paddingVertical="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
