@@ -32,6 +32,6 @@
     <string name="test_button_text">Test</string>
 
     <string name="empty_state_message">New messages will appear here.</string>
-    <string name="forwarding_error_title">Forwarding Error</string>
+    <string name="forwarding_error_title"> Recent Forwarding Error</string>
     <string name="ok_button_text">OK</string>
 </resources>
