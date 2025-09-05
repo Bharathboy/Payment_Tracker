@@ -111,6 +111,18 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
             Log.d("MainActivity", "Detected old data format and cleared messages from SharedPreferences.");
         }
 
+
+        ImageButton telegramButton = findViewById(R.id.telegramButton);
+        telegramButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String url = "https://telegram.me/blaze_updatez";// Replace with your actual channel link
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
+            }
+        });
+
         ImageButton settingsButton = findViewById(R.id.settingsButton);
         ImageButton menuButton = findViewById(R.id.menuButton);
         notificationButton = findViewById(R.id.notificationButton); // Initialize the new button
