@@ -7,10 +7,8 @@ import java.io.Serializable;
 public class PaymentDetails implements Serializable {
     public String amount;
     public String upiRefId;
-    public String senderName;
     public String senderVpa;
     public String fullSmsBody;
     public String bank;
     public String dateTime;
-    public String notes;
 }

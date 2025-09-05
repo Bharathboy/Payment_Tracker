@@ -26,7 +26,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
-import android.view.LayoutInflater;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -160,19 +159,11 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         ImageButton telegramInfoButton = dialogView.findViewById(R.id.telegramInfoButton);
 
         webhookInfoButton.setOnClickListener(v -> {
-            new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
-                    .setTitle("Webhook Settings Info")
-                    .setMessage("A webhook is a way to send real-time data from your app to an external URL. Enter a URL and an optional secret key for security.")
-                    .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
-                    .show();
+            showThemedInfoDialog("Webhook Settings Info", "A webhook is a way to send real-time data from your app to an external URL. Enter a URL and an optional secret key for security.");
         });
 
         telegramInfoButton.setOnClickListener(v -> {
-            new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
-                    .setTitle("Telegram Settings Info")
-                    .setMessage("A Telegram bot token and chat ID are required to forward messages to a Telegram chat or channel. You can get these by creating a bot on Telegram.")
-                    .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
-                    .show();
+            showThemedInfoDialog("Telegram Settings Info", "A Telegram bot token and chat ID are required to forward messages to a Telegram chat or channel. You can get these by creating a bot on Telegram.");
         });
 
         loadSettingsForDialog(dialogWebhookUrlEditText, WEBHOOK_URL);
@@ -236,16 +227,14 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         String telegramBotToken = sharedPreferences.getString(TELEGRAM_BOT_TOKEN, "").trim();
         String telegramChatId = sharedPreferences.getString(TELEGRAM_CHAT_ID, "").trim();
 
-        boolean isWebhookConfigured = !webhookUrl.isEmpty();
-        boolean isTelegramConfigured = !telegramBotToken.isEmpty() && !telegramChatId.isEmpty();
         boolean isPermissionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
         boolean isNotificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        boolean isWebhookConfigured = !webhookUrl.isEmpty();
+        boolean isTelegramConfigured = !telegramBotToken.isEmpty() && !telegramChatId.isEmpty();
 
-        String title = "Detailed App Status";
+        // Build message content
         StringBuilder messageBuilder = new StringBuilder();
-
-        // Status of permissions
         messageBuilder.append("<b>Permissions:</b><br>");
         if (isPermissionGranted && isNotificationPermissionGranted) {
             messageBuilder.append("- All required permissions granted.<br>");
@@ -253,7 +242,6 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
             messageBuilder.append("- Permissions are missing. Please grant them in app settings.<br>");
         }
 
-        // Status of forwarding settings
         messageBuilder.append("<br><b>Forwarding Settings:</b><br>");
         if (isWebhookConfigured) {
             messageBuilder.append("- Webhook is ON.<br>");
@@ -271,18 +259,27 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
             messageBuilder.append("<br>No forwarding endpoints are configured. Messages will be logged locally but not forwarded.");
         }
 
-        // Display the detailed status in a dialog
-        AlertDialog dialog = new AlertDialog.Builder(MainActivity.this, R.style.AlertDialog_App)
-                .setTitle(title)
-                .setMessage(Html.fromHtml(messageBuilder.toString(), Html.FROM_HTML_MODE_LEGACY))
-                .setPositiveButton("OK", (dialogInterface, which) -> dialogInterface.dismiss())
-                .show();
+        // Use a themed dialog for consistency
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_detailed_status, null);
+        builder.setView(dialogView);
 
-        // Set button color
-        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-        if (positiveButton != null) {
-            positiveButton.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.button_normal));
+        TextView titleTextView = dialogView.findViewById(R.id.dialogTitleTextView);
+        TextView messageTextView = dialogView.findViewById(R.id.dialogMessageTextView);
+        Button okButton = dialogView.findViewById(R.id.dialogOkButton);
+
+        titleTextView.setText(R.string.detailed_status_title);
+        messageTextView.setText(Html.fromHtml(messageBuilder.toString(), Html.FROM_HTML_MODE_LEGACY));
+
+        final AlertDialog dialog = builder.create();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
+
+        okButton.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void updateStatusIconColor() {
@@ -339,7 +336,7 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
             if (info != null) {
                 String title = info[0];
                 String message = info[1];
-                showInfoDialog(title, message);
+                showThemedInfoDialog(title, message);
             }
         };
 
@@ -351,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         menuDialog.show();
     }
 
-    private void showInfoDialog(String title, String message) {
+    private void showThemedInfoDialog(String title, String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_info_message, null);
@@ -374,7 +371,6 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         okButton.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }
-
 
     private void saveSettingsFromDialog(String key, String value) {
         SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
@@ -716,6 +712,7 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
     }
 
     private void showErrorMessage(String message) {
+        // Inflate the themed error dialog layout
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_error_message, null);
@@ -735,7 +732,6 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
         }
 
         okButton.setOnClickListener(v -> dialog.dismiss());
-
         dialog.show();
     }
 }
