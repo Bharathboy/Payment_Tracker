@@ -677,12 +677,10 @@ public class MainActivity extends AppCompatActivity implements TelegramSender.Te
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("amount", "1.00");
             jsonObject.put("upiRefId", "TEST1234567890");
-            jsonObject.put("senderName", "Test User");
             jsonObject.put("senderVpa", "test@upi");
             jsonObject.put("fullSmsBody", "This is a test message from your app.");
             jsonObject.put("bank", "Test Bank");
             jsonObject.put("dateTime", "2023-10-27 10:30:00");
-            jsonObject.put("notes", "Testing");
 
             String jsonPayload = jsonObject.toString(4);
 
