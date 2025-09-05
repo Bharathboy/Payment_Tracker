@@ -230,7 +230,6 @@ public class SmsForwardingService extends Service {
         try {
             jsonPayload.put("amount_received", details.amount);
             jsonPayload.put("upi_ref_id", details.upiRefId);
-            jsonPayload.put("sender_name", details.senderName);
             jsonPayload.put("sender_vpa", details.senderVpa);
             jsonPayload.put("full_sms_body", fullSms);
         } catch (JSONException e) {
@@ -276,12 +275,10 @@ public class SmsForwardingService extends Service {
             JSONObject json = new JSONObject();
             json.put("amount", details.amount != null ? details.amount : "");
             json.put("upiRefId", details.upiRefId != null ? details.upiRefId : "");
-            json.put("senderName", details.senderName != null ? details.senderName : "");
             json.put("senderVpa", details.senderVpa != null ? details.senderVpa : "");
             json.put("fullSmsBody", fullSms != null ? fullSms : "");
             json.put("bank", details.bank != null ? details.bank : "");
             json.put("dateTime", details.dateTime != null ? details.dateTime : "");
-            json.put("notes", details.notes != null ? details.notes : "");
             jsonString = "<pre>" + json.toString(4) + "</pre>"; // Pretty print with HTML parse mode
         } catch (JSONException e) {
             broadcastForwardingStatus(STATUS_TELEGRAM_FAILURE, "Error creating JSON payload for Telegram: " + e.getMessage());
