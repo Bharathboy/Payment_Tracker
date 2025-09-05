@@ -154,7 +154,6 @@
             android:text="@string/telegram_permissions_warning"
             android:textColor="@color/status_red"
             android:textSize="9sp" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
