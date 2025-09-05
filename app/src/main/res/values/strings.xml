@@ -37,4 +37,5 @@
 
     <string name="detailed_status_title">Detailed App Status</string>
 
+    <string name="telegram_permissions_warning">Make sure the bot is an admin and has send permissions in given channel.</string>
 </resources>

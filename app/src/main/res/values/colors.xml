@@ -11,6 +11,7 @@
     <color name="border_primary_light">#36424D</color>
     <color name="white">#FFFFFF</color>
     <color name="status_green">#4CAF50</color>
+    <color name="status_red">#FF4D4D</color>
 
     <color name="gradient_start">#FFC107</color>
     <color name="gradient_end">#4CAF50</color>
