@@ -182,7 +182,7 @@ public class SmsParser {
             return null;
         }
 
-        if (!isReceived ) {
+        if (!isReceived) {
             return null;
         }
 
